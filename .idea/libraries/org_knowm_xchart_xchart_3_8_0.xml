@@ -1,0 +1,24 @@
+<component name="libraryTable">
+  <library name="org.knowm.xchart:xchart:3.8.0" type="repository">
+    <properties maven-id="org.knowm.xchart:xchart:3.8.0" />
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/xchart-3.8.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/VectorGraphics2D-0.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/graphics2d-0.30.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/pdfbox-2.0.22.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/fontbox-2.0.22.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-logging-1.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/animated-gif-lib-1.4.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$PROJECT_DIR$/lib/xchart-3.8.0-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/VectorGraphics2D-0.13-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/graphics2d-0.30-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/pdfbox-2.0.22-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/fontbox-2.0.22-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-logging-1.2-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/animated-gif-lib-1.4-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES />
+  </library>
+</component>
