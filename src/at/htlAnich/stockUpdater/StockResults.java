@@ -6,6 +6,7 @@ import jdk.jshell.spi.ExecutionControl;
 import org.jetbrains.annotations.NotNull;
 
 import java.math.BigDecimal;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -105,6 +106,35 @@ public class StockResults implements CanBeTable {
 			mLowerBounds.put(x, Float.MAX_VALUE);
 			mUpperBounds.put(x, -Float.MAX_VALUE);
 		}
+	}
+
+	/**
+	 * Simply updates the <code>avg200</code> based on <code>close_adjusted</code>.
+	 */
+	public void calcAverage(){
+		final var daysBack = 200;
+
+		for(var i = 0; i < this.mDataPoints.size(); ++i){
+
+			// sum up all values from currPoint.Date.minusDays(200)
+			var sum = 0.0f;
+			for(var j = i-1; !(j>=0 && j>=i-daysBack); --j){
+				if(j < 0 || j < i-daysBack) {
+					try{
+						throw new Exception("Should not have come to this");
+					}catch(Exception e){
+						e.printStackTrace();
+					}
+					break;
+				}
+				sum += this.mDataPoints.get(j).getValue(StockDataPoint.ValueType.close_adjusted);
+			}
+			sum = sum/daysBack;
+
+			this.mDataPoints.get(i).setValue(StockDataPoint.ValueType.avg200, sum);
+		}
+
+		return;
 	}
 
 	/**

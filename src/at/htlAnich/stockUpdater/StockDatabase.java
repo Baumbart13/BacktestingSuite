@@ -162,71 +162,6 @@ public class StockDatabase extends MySQL implements CanBeTable {
 		return;
 	}
 
-
-	/**
-	 * Simply updates the <code>avg200</code> based on <code>close_adjusted</code>.
-	 * @throws SQLException
-	 */
-	private void updateAvgValues(StockResults results) throws SQLException{
-		final var daysBack = 200;
-
-		for(var i = 0; i < results.getDataPoints().size(); ++i){
-
-			// sum up all values from currPoint.Date.minusDays(200)
-			var sum = 0.0f;
-			for(var j = i-1; !(j>=0 && j>=i-daysBack); --j){
-				if(j < 0 || j < i-daysBack) {
-					try{
-						throw new Exception("Should not have come to this");
-					}catch(Exception e){
-						e.printStackTrace();
-					}
-					break;
-				}
-				sum += results.getDataPoints().get(j).getValue(StockDataPoint.ValueType.close_adjusted);
-			}
-			sum = sum/daysBack;
-
-			results.getDataPoints().get(i).setValue(StockDataPoint.ValueType.avg200, sum);
-		}
-
-		return;
-	}
-
-	/**
-	 * Inserts new avg-columns into the db-table.
-	 * @param dataPoints The object eventually containing new averages.
-	 * @throws SQLException
-	 */
-	private void updateAvgs(List<StockDataPoint> dataPoints) throws SQLException{
-
-		var avgsInResult = new LinkedList<Long>();
-		for(var t : dataPoints){
-			for(var avg : t.getAverages()){
-				if(!avgsInResult.contains(avg)){
-					avgsInResult.add(avg);
-				}
-			}
-		}
-		var avgsInDatabase = Arrays.asList(getAvgsOnDatabase());
-		var avgsToAdd = new LinkedList<Long>();
-		for(var t : avgsInResult){
-			if(!avgsInDatabase.contains(t)) {
-				avgsToAdd.add(t);
-			}
-		}
-
-		// add new avgs to database
-		for(var l : avgsToAdd) {
-			var stmnt = mConnection.prepareStatement(String.format(
-				"ALTER TABLE %s ADD COLUMN %s FLOAT;",
-				_TABLE_NAME__DATA,
-				StockResults.DatabaseNames_Data.data_avg.toString(l)
-			));
-			stmnt.execute();
-		}
-	}
-
 	/**
 	 * Returns the existing average-columns on the database.
 	 * @return an array with every average-column existing on the database.
@@ -279,51 +214,6 @@ public class StockDatabase extends MySQL implements CanBeTable {
 	}
 
 	/**
-	 * Requests the data about the stock from the database.
-	 * @param symbol The stock that shall be requested.
-	 * @return the data of the provided symbol.
-	 */
-	public StockResults getStockData(String symbol){
-		var out = new StockResults(symbol);
-		var sql = String.format("SELECT * FROM %s" +
-				"WHERE stock_symbol = ?" +
-				"ORDER BY stock_datetime ASC;",
-
-			_TABLE_NAME__DATA
-		);
-
-		try {
-			var stmnt = mConnection.prepareStatement(sql);
-			stmnt.setString(1, symbol);
-			var rs = stmnt.executeQuery();
-
-			while(rs.next()){
-				var dataPoint = new StockDataPoint(rs.getTimestamp("stock_datetime").toLocalDateTime());
-				var rsAvgs = getAvgsOnDatabase();
-
-				// First insert the averages
-				for(var l : rsAvgs){
-					dataPoint.setValue(StockValueType.avgValue, rs.getFloat(StockValueType.avgValue.toString()), l);
-				}
-
-				// then insert the other values
-				for(var t : StockValueType.values()){
-
-					if(t == StockValueType.avgValue){
-						continue;
-					}
-					dataPoint.setValue(t, rs.getFloat(t.name()));
-				}
-			}
-
-		}catch(SQLException e){
-			e.printStackTrace();
-		}
-
-		return out;
-	}
-
-	/**
 	 * <strong>DataTables structure:</strong><br>
 	 * 	<code>stock_datetime	DATETIME NOT NULL,<br>
 	 * 	stock_symbol	VARCHAR(8) NOT NULL,<br>
@@ -349,7 +239,7 @@ public class StockDatabase extends MySQL implements CanBeTable {
 	 */
 	@Override
 	public String getTableName() {
-		return String.format("\"%s\" and \"%s\"",
-			_TABLE_NAME__DATA, _TABLE_NAME__SYMBOLS);
+		return String.format("%s",
+			_TABLE_NAME__DATA);
 	}
 }
