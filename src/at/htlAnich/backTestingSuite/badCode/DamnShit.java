@@ -28,7 +28,7 @@ public class DamnShit {
 	protected StockDatabase mStockDb;
 	protected BackTestingDatabase mBacktestDb;
 
-	public BaumbartLoggerGUI mLogGui = new BaumbartLoggerGUI("Detailed Log");
+	public static BaumbartLoggerGUI mLogGui = new BaumbartLoggerGUI("Detailed Log");
 
 	public DamnShit(String symbol, boolean inProduction){
 		mSymbol = symbol;
@@ -60,6 +60,9 @@ public class DamnShit {
 		// ATTENTION:	don't forget splitcorrection, which has to
 		// 		be done backwards, but trading is forwards!!
 		for(var dep : depotData){
+			if(dep.getStrategy().equals(Depot.Strategy.NONE)){
+				continue;
+			}
 			Trader.trade(dep, stockData);
 		}
 
@@ -90,7 +93,7 @@ public class DamnShit {
 	}
 
 	public void writeToDepotDb(List<Depot> depoData, String symbol){
-		mBacktestDb = new BackTestingDatabase("localhost", "root", "DuArschloch4", "baumbartstocks");
+		mBacktestDb = new BackTestingDatabase("localhost:3306", "root", "DuArschloch4", "baumbartstocks");
 
 		try{
 			mLogGui.loglnf("Connecting to backtest-db");
@@ -121,10 +124,17 @@ public class DamnShit {
 			mBacktestDb.createDatabase();
 			mLogGui.loglnf("creating table if necessary");
 			mBacktestDb.createTable(res.getTableName());
+			mBacktestDb.initTable(res.getSymbol());
 			mLogGui.loglnf("reading values from db");
 			for(var strat : Depot.Strategy.values()) {
-				var temp = mBacktestDb.getValues(res.getSymbol(), strat);
-				deps.add(temp);
+				try {
+					var temp = mBacktestDb.getValues(res.getSymbol(), strat);
+					deps.add(temp);
+				}catch(Exception e){
+					errlnf("mine");
+					e.printStackTrace();
+					System.exit(0);
+				}
 			}
 			mLogGui.loglnf("disconnection from backtest-db");
 			mBacktestDb.disconnect();

@@ -180,9 +180,15 @@ public class Depot implements CanBeTable {
 	}
 
 	public Depot(Strategy strat, Point... points){
-		var sortedTemp = Arrays.asList(points);
+		var sortedTemp = new LinkedList<Point>();
+
+		for(var p : points){
+			sortedTemp.add(p);
+		}
+
 		Collections.sort(sortedTemp);
-		this.mPoints.addAll(mPoints);
+		this.mPoints = sortedTemp;
+		//this.mPoints.addAll(sortedTemp);
 		this.mStrategy = strat;
 	}
 
@@ -291,13 +297,7 @@ public class Depot implements CanBeTable {
 	 * @param point the point, that will be added.
 	 */
 	public void addDepotPoint(Point point){
-		int index = 0;
-		for( ; index < mPoints.size(); ++index){
-			if(point.getDate().isBefore(mPoints.get(index).getDate())){
-				break;
-			}
-		}
-		mPoints.add(index, point);
+		mPoints.add(point);
 	}
 
 	/**

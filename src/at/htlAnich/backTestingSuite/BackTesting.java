@@ -44,6 +44,8 @@ public class BackTesting {
 
 		damn = new DamnShit(symbol, inProd);
 		damn.getValuesAndUpdateDatabase();
+		System.out.println("DamnShit ended");
+		System.exit(0);
 
 		/*var vals = new Depot[Depot.Strategy.values().length];
 		try {
