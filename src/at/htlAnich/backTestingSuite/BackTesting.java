@@ -45,7 +45,7 @@ public class BackTesting {
 		damn = new DamnShit(symbol, inProd);
 		damn.getValuesAndUpdateDatabase();
 
-		var vals = new Depot[Depot.Strategy.values().length];
+		/*var vals = new Depot[Depot.Strategy.values().length];
 		try {
 			var backDb = new BackTestingDatabase("localhost:3306", "root", "DuArschloch4", "baumbartstocks");
 			backDb.connect();
@@ -60,7 +60,7 @@ public class BackTesting {
 			backDb.disconnect();
 		}catch (SQLException e){
 			e.printStackTrace();
-		}
+		}*/
 
 	}
 }

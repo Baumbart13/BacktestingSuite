@@ -97,6 +97,7 @@ public class StockDatabase extends MySQL implements CanBeTable {
 		createDatabase();
 		createTable(results.getTableName());
 
+		loglnf("insertOrUpdateStock_DATA(results)");
 		insertOrUpdateStock_DATA(results);
 		loglnf("Uploaded to %s:%s", mDatabase, _TABLE_NAME__DATA);
 	}
@@ -118,22 +119,52 @@ public class StockDatabase extends MySQL implements CanBeTable {
 		// if connection problems happen, so all data could be corrupted
 		// therefore we upload all one-by-one
 		for(var dataPoint : results.getDataPoints()){
+
+			//////////////////////////////////
+			//                              //
+			//         TESTING VALUES       //
+			//                              //
+			//////////////////////////////////
+
+			/*dataPoint.mDateTime = LocalDateTime.of(2021, 12, 12,12,12,12,12);
+			results.getSymbol();
+			dataPoint.setValue(StockDataPoint.ValueType.open, 1.0f);
+			loglnf("key:%s\tvalue:%10.4f", StockDataPoint.ValueType.open, dataPoint.getValue(StockDataPoint.ValueType.open));
+			dataPoint.setValue(StockDataPoint.ValueType.close,2.0f);
+			loglnf("key:%s\tvalue:%10.4f", StockDataPoint.ValueType.close, dataPoint.getValue(StockDataPoint.ValueType.close));
+			dataPoint.setValue(StockDataPoint.ValueType.high, 3.0f);
+			loglnf("key:%s\tvalue:%10.4f", StockDataPoint.ValueType.high, dataPoint.getValue(StockDataPoint.ValueType.high));
+			dataPoint.setValue(StockDataPoint.ValueType.low, 4.0f);
+			loglnf("key:%s\tvalue:%10.4f", StockDataPoint.ValueType.low, dataPoint.getValue(StockDataPoint.ValueType.low));
+			dataPoint.setValue(StockDataPoint.ValueType.volume, 5.0f);
+			loglnf("key:%s\tvalue:%10.4f", StockDataPoint.ValueType.volume, dataPoint.getValue(StockDataPoint.ValueType.volume));
+			dataPoint.setValue(StockDataPoint.ValueType.splitCoefficient, 6.0f);
+			loglnf("key:%s\tvalue:%10.4f", StockDataPoint.ValueType.splitCoefficient, dataPoint.getValue(StockDataPoint.ValueType.splitCoefficient));
+			dataPoint.setValue(StockDataPoint.ValueType.close_adjusted, 7.0f);
+			loglnf("key:%s\tvalue:%10.4f", StockDataPoint.ValueType.close_adjusted, dataPoint.getValue(StockDataPoint.ValueType.close_adjusted));
+			dataPoint.setValue(StockDataPoint.ValueType.avg200, 8.0f);
+			loglnf("key:%s\tvalue:%10.4f", StockDataPoint.ValueType.avg200, dataPoint.getValue(StockDataPoint.ValueType.avg200));*/
+
+
 			//////////////////////////////////
 			//                              //
 			//          UPDATE-TEXT         //
 			//                              //
 			//////////////////////////////////
-
-			var stmntText = new StringBuilder(String.format(
-				"insert into %s " +
-					"(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) " +
-					"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
-					"on duplicate key update %s=?, %s=?, %s=?, %s=?, %s=?, %s=?, %s=?, %s=?;",
-				_TABLE_NAME__DATA,
-				datetime, symbol, open, close, high, low, volume, split, closeAdj, avg200,
-				// preparedStatement-placeholders
+			var stmntTextInsertInto = new StringBuilder(String.format(
+				"insert into %s (%s, %s, " +
+				"%s, %s, %s, %s, %s, %s, %s, %s)" +
+				"VALUES ("   +   "? ,  ?, " +
+				"? , ? , ? , ? , ? , ? , ? , ?) ",
+				_TABLE_NAME__DATA, datetime, symbol,
 				open, close, high, low, volume, split, closeAdj, avg200
 			));
+			var stmntTextOnUpdate = new StringBuilder(String.format(
+				"on duplicate key update %s=?, %s=?, %s=?, %s=?, %s=?, %s=?, %s=?, %s=?;",
+				open, close, high, low, volume, split, closeAdj, avg200
+			));
+
+			var stmntText = stmntTextInsertInto.append(stmntTextOnUpdate);
 
 			//////////////////////////////////
 			//                              //
@@ -144,17 +175,44 @@ public class StockDatabase extends MySQL implements CanBeTable {
 			var stmnt = mConnection.prepareStatement(stmntText.toString());
 
 			var i = 1;
+			// data_datetime
+			// data_symbol
 			stmnt.setDate(i++, Date.valueOf(dataPoint.mDateTime.toLocalDate()));
-			stmnt.setString(i++, results.getName());
-			for(var j = i; j < StockDataPoint.ValueType.values().length; ++j){
-				stmnt.setFloat(i++, dataPoint.getValue(StockDataPoint.ValueType.valueOf(j)));
-			}
-			for(var j = 2; j < StockDataPoint.ValueType.values().length; ++j){
-				stmnt.setFloat(i++, dataPoint.getValue(StockDataPoint.ValueType.valueOf(j)));
-			}
+			stmnt.setString(i++, results.getSymbol());
 
-			loglnf(stmnt.toString());
-			at.htlAnich.tools.BaumbartLogger.waitForKeyPress();
+			// data_open
+			// data_close
+			// data_high
+			// data_low
+			// data_volume
+			// data_splitCoefficient
+			// data_close_adjusted
+			// data_avg200
+			stmnt.setFloat(i++, dataPoint.getValue(StockDataPoint.ValueType.open));
+			stmnt.setFloat(i++, dataPoint.getValue(StockDataPoint.ValueType.close));
+			stmnt.setFloat(i++, dataPoint.getValue(StockDataPoint.ValueType.high));
+			stmnt.setFloat(i++, dataPoint.getValue(StockDataPoint.ValueType.low));
+			stmnt.setFloat(i++, dataPoint.getValue(StockDataPoint.ValueType.volume));
+			stmnt.setFloat(i++, dataPoint.getValue(StockDataPoint.ValueType.splitCoefficient));
+			stmnt.setFloat(i++, dataPoint.getValue(StockDataPoint.ValueType.close_adjusted));
+			stmnt.setFloat(i++, dataPoint.getValue(StockDataPoint.ValueType.avg200));
+
+			// data_open
+			// data_close
+			// data_high
+			// data_low
+			// data_volume
+			// data_splitCoefficient
+			// data_close_adjusted
+			// data_avg200
+			stmnt.setFloat(i++, dataPoint.getValue(StockDataPoint.ValueType.open));
+			stmnt.setFloat(i++, dataPoint.getValue(StockDataPoint.ValueType.close));
+			stmnt.setFloat(i++, dataPoint.getValue(StockDataPoint.ValueType.high));
+			stmnt.setFloat(i++, dataPoint.getValue(StockDataPoint.ValueType.low));
+			stmnt.setFloat(i++, dataPoint.getValue(StockDataPoint.ValueType.volume));
+			stmnt.setFloat(i++, dataPoint.getValue(StockDataPoint.ValueType.splitCoefficient));
+			stmnt.setFloat(i++, dataPoint.getValue(StockDataPoint.ValueType.close_adjusted));
+			stmnt.setFloat(i++, dataPoint.getValue(StockDataPoint.ValueType.avg200));
 
 			stmnt.executeUpdate();
 		}

@@ -20,7 +20,9 @@ public class BackTestingDatabase extends Database {
 		stocks,
 		worth,
 		close,
-		avg;
+		avg,
+		money,
+		strat;
 
 		@Override
 		public String toString(){
@@ -38,7 +40,10 @@ public class BackTestingDatabase extends Database {
 				"%s INTEGER NOT NULL," +		// backtesting_stocks
 				"%s FLOAT NOT NULL," +			// backtesting_worth
 				"%s FLOAT NOT NULL," +			// backtesting_close
-				"%s FLOAT NOT NULL);",			// backtesting_avg
+				"%s FLOAT NOT NULL," +			// backtesting_avg
+				"%s FLOAT NOT NULL," +			// backtesting_money
+				"%s INTEGER NOT NULL," +		// backtesting_strat
+				"primary key(%s, %s, %s));",	// pk = date+symbol+strat
 			DatabaseNames_Backtesting.date.toString(),
 			DatabaseNames_Backtesting.symbol.toString(),
 			DatabaseNames_Backtesting.buyFlag.toString(),
@@ -46,13 +51,89 @@ public class BackTestingDatabase extends Database {
 			DatabaseNames_Backtesting.stocks.toString(),
 			DatabaseNames_Backtesting.worth.toString(),
 			DatabaseNames_Backtesting.close.toString(),
-			DatabaseNames_Backtesting.avg.toString()
+			DatabaseNames_Backtesting.avg.toString(),
+			DatabaseNames_Backtesting.money.toString(),
+			DatabaseNames_Backtesting.strat.toString(),
+			// Primary key
+			DatabaseNames_Backtesting.date.toString(),
+			DatabaseNames_Backtesting.symbol.toString(),
+			DatabaseNames_Backtesting.strat.toString()
 		));
 		stmnt.execute();
+
+		initTable();
 	}
 
-	public Depot getValues(String symbol, Depot.Strategy strategy){
-		return new Depot();
+	private void initTable() throws SQLException{
+		// if there is less than or exactly 1 entry,
+		var stmnt = mConnection.prepareStatement(String.format(
+			"SELECT COUNT(*) FROM %s AS 'entries';",
+			_TABLE_NAME
+		));
+
+		var rs = stmnt.executeQuery();
+		var needToInit = rs.getInt("entries") <= 1;
+
+		if(!needToInit){
+			return;
+		}
+
+		rs.close();
+		stmnt = mConnection.prepareStatement(String.format(
+			"INSERT into %s (%s) VALUES (?)",
+			_TABLE_NAME, DatabaseNames_Backtesting.money
+		));
+		stmnt.setInt(1, 100_000);
+		stmnt.executeUpdate();
+	}
+
+	public Depot getValues(String symbol, Depot.Strategy strategy) throws SQLException{
+		Depot dep = new Depot(strategy);
+
+		var stmnt = mConnection.prepareStatement(String.format(
+			"select %s, %s, %s, %s, %s, %s, %s, %s, %s from %s where" +
+			"%s=? and %s=?;",
+			DatabaseNames_Backtesting.date.toString(),
+			DatabaseNames_Backtesting.symbol.toString(),
+			DatabaseNames_Backtesting.buyFlag.toString(),
+			DatabaseNames_Backtesting.delta.toString(),
+			DatabaseNames_Backtesting.stocks.toString(),
+			DatabaseNames_Backtesting.worth.toString(),
+			DatabaseNames_Backtesting.avg.toString(),
+			DatabaseNames_Backtesting.close.toString(),
+			DatabaseNames_Backtesting.strat.toString(),
+			DatabaseNames_Backtesting.money.toString(),
+			// from
+			_TABLE_NAME,
+			// where
+			DatabaseNames_Backtesting.symbol.toString(),
+			DatabaseNames_Backtesting.strat.toString()
+		));
+
+		stmnt.setString(1, symbol);
+		stmnt.setInt(2, strategy.ordinal());
+
+		var rs = stmnt.executeQuery();
+
+		// Process from db into program
+
+		while(rs.next()) {
+			var date = rs.getDate(DatabaseNames_Backtesting.date.toString()).toLocalDate();
+			var buyFlag = Depot.Point.BuyFlag.valueOf(rs.getInt(DatabaseNames_Backtesting.buyFlag.toString()));
+			var delta = rs.getInt(DatabaseNames_Backtesting.delta.toString());
+			var stocks = rs.getInt(DatabaseNames_Backtesting.stocks.toString());
+			var worth = rs.getFloat(DatabaseNames_Backtesting.worth.toString());
+			var avg = rs.getFloat(DatabaseNames_Backtesting.avg.toString());
+			var close = rs.getFloat(DatabaseNames_Backtesting.close.toString());
+			var strat = Depot.Strategy.valueOf(rs.getInt(DatabaseNames_Backtesting.strat.toString()));
+			var money = rs.getFloat(DatabaseNames_Backtesting.money.toString());
+
+			var depPoint = new Depot.Point(date, symbol, buyFlag, delta, stocks, worth, avg, close, money);
+
+			dep.addDepotPoint(depPoint);
+		}
+
+		return dep;
 	}
 
 	public BackTestingDatabase(){
@@ -97,8 +178,9 @@ public class BackTestingDatabase extends Database {
 			// backtesting_worth
 			// backtesting_close
 			// backtesting_avg
+			// backtesting_money
 			StringBuilder stmntText = new StringBuilder(String.format(
-				"INSERT INTO %s (%s, %s, %s, %s, %s, %s, %s) VALUES (? ? ? ? ? ? ?) ON DUPLICATE KEY UPDATE %s=?, %s=?, %s=?, %s=?;",
+				"INSERT INTO %s (%s, %s, %s, %s, %s, %s, %s, %s) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE %s=?, %s=?, %s=?, %s=?, %s=?, %s=?, %s=?;",
 				dep.getTableName(),
 				DatabaseNames_Backtesting.date.toString(),
 				DatabaseNames_Backtesting.symbol.toString(),
@@ -108,22 +190,41 @@ public class BackTestingDatabase extends Database {
 				DatabaseNames_Backtesting.worth.toString(),
 				DatabaseNames_Backtesting.close.toString(),
 				DatabaseNames_Backtesting.avg.toString(),
+				DatabaseNames_Backtesting.money.toString(),
 				// VALUES...ON DUPLICATE KEY UPDATE
 				DatabaseNames_Backtesting.buyFlag.toString(),
 				DatabaseNames_Backtesting.delta.toString(),
 				DatabaseNames_Backtesting.stocks.toString(),
 				DatabaseNames_Backtesting.worth.toString(),
 				DatabaseNames_Backtesting.close.toString(),
-				DatabaseNames_Backtesting.avg.toString()
+				DatabaseNames_Backtesting.avg.toString(),
+				DatabaseNames_Backtesting.money.toString()
 			));
 
 			stmnt = mConnection.prepareStatement(stmntText.toString());
 
-			stmnt.setDate(1, Date.valueOf(point.getDate()));
-			stmnt.setString(2, symbol);
-			stmnt.setInt(3, point.getFlag().ordinal());
+			var i = 1;
+			stmnt.setDate(i++, Date.valueOf(point.getDate()));
+			stmnt.setString(i++, symbol);
+			stmnt.setInt(i++, point.getFlag().ordinal());	// backtesting_buyFlag
+			stmnt.setFloat(i++, point.getBuyAmount());		// backtesting_delta
+			stmnt.setInt(i++, point.getStocks());				// backtesting_stocks
+			stmnt.setFloat(i++, point.getWorth());			// backtesting_worth
+			stmnt.setFloat(i++, point.getClose());			// backtesting_close
+			stmnt.setFloat(i++, point.getAvg200());			// backtesting_avg
+			stmnt.setFloat(i++, point.getMoney());		// backtesting_money
+			// VALUES...ON DUPLICATE KEY UPDATE
+			stmnt.setInt(i++, point.getFlag().ordinal());	// backtesting_buyFlag
+			stmnt.setFloat(i++, point.getBuyAmount());		// backtesting_delta
+			stmnt.setInt(i++, point.getStocks());				// backtesting_stocks
+			stmnt.setFloat(i++, point.getWorth());			// backtesting_worth
+			stmnt.setFloat(i++, point.getClose());			// backtesting_close
+			stmnt.setFloat(i++, point.getAvg200());			// backtesting_avg
+			stmnt.setFloat(i++, point.getMoney());			// backtesting_money
 
+			stmnt.executeUpdate();
 		}
+		return;
 	}
 
 	@Override
