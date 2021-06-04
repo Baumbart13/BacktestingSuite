@@ -63,8 +63,8 @@ public class StockResults implements CanBeTable {
 			var tempPoint = mDataPoints.get(i);
 
 			splitCoeff *= tempPoint.getValue(StockDataPoint.ValueType.splitCoefficient);
-			BigDecimal tempClose = new BigDecimal(tempPoint.getValue(StockDataPoint.ValueType.close));
-			var adjustedClose = tempClose.divide(new BigDecimal(splitCoeff)).floatValue();
+			var tempClose = tempPoint.getValue(StockDataPoint.ValueType.close);
+			var adjustedClose = tempClose / splitCoeff;
 
 			tempPoint.setValue(StockDataPoint.ValueType.close_adjusted, adjustedClose);
 
@@ -114,12 +114,12 @@ public class StockResults implements CanBeTable {
 	public void calcAverage(){
 		final var daysBack = 200;
 
-		for(var i = 0; i < this.mDataPoints.size(); ++i){
+		for(var currDay = 0; currDay < this.mDataPoints.size(); ++currDay){
 
 			// sum up all values from currPoint.Date.minusDays(200)
 			var sum = 0.0f;
-			for(var j = i-1; !(j>=0 && j>=i-daysBack); --j){
-				if(j < 0 || j < i-daysBack) {
+			for(var dayPast = currDay-1; !(dayPast<0 || dayPast<currDay-daysBack); --dayPast){
+				if(dayPast < 0 || dayPast < currDay-daysBack) {
 					try{
 						throw new Exception("Should not have come to this");
 					}catch(Exception e){
@@ -127,11 +127,11 @@ public class StockResults implements CanBeTable {
 					}
 					break;
 				}
-				sum += this.mDataPoints.get(j).getValue(StockDataPoint.ValueType.close_adjusted);
+				sum += this.mDataPoints.get(dayPast).getValue(StockDataPoint.ValueType.close_adjusted);
 			}
 			sum = sum/daysBack;
 
-			this.mDataPoints.get(i).setValue(StockDataPoint.ValueType.avg200, sum);
+			this.mDataPoints.get(currDay).setValue(StockDataPoint.ValueType.avg200, sum);
 		}
 
 		return;
@@ -196,6 +196,9 @@ public class StockResults implements CanBeTable {
 		return mUpperBounds.get(t) - mLowerBounds.get(t);
 	}
 
+	/**
+	 * @return the DataPoints of this object.
+	 */
 	public List<StockDataPoint> getDataPoints(){
 		return mDataPoints;
 	}

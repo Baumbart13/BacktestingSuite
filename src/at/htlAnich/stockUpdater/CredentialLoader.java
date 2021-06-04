@@ -1,14 +1,13 @@
 package at.htlAnich.stockUpdater;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.util.Locale;
 
 import static at.htlAnich.tools.BaumbartLogger.errf;
+import static at.htlAnich.tools.BaumbartLogger.errlnf;
 
 public final class CredentialLoader {
-	private static BufferedReader reader = initReader();
+	private static BufferedReader reader = null;
 	public static final String csvSeparator = ",";
 	public static final String lineSeparator = System.lineSeparator();
 	private CredentialLoader(){System.err.println("How did you call this? Go away!!"); System.exit(-1);}
@@ -38,16 +37,15 @@ public final class CredentialLoader {
 		public String apiKey(){return mKey;}
 	}
 
-	private static BufferedReader initReader(){
-		return initReader("");
-	}
-
 	private static BufferedReader initReader(String file){
 		if(reader != null)
 			return reader;
 		BufferedReader out = null;
 		try {
-			out = new BufferedReader(new FileReader(""));
+			out = new BufferedReader(new FileReader(file));
+		}catch(FileNotFoundException e){
+			errlnf("File \"%s\" not found", new File(file).getAbsolutePath());
+			e.printStackTrace();
 		}catch(IOException e){
 			e.printStackTrace();
 		}
@@ -81,6 +79,9 @@ public final class CredentialLoader {
 				throw new IOException("Corrupted database file!");
 			}
 			out = new DatabaseCredentials(splittedLine[0], splittedLine[1], splittedLine[2], splittedLine[3]);
+		}catch(FileNotFoundException e){
+			errlnf("File \"%s\" not found", new File(file).getAbsolutePath());
+			e.printStackTrace();
 		}catch(IOException e){
 			e.printStackTrace();
 		}catch (NullPointerException e){
@@ -102,6 +103,9 @@ public final class CredentialLoader {
 			}
 			var line = reader.readLine().trim();
 			out = new ApiCredentials(line);
+		}catch(FileNotFoundException e){
+			errlnf("File \"%s\" not found", new File(file).getAbsolutePath());
+			e.printStackTrace();
 		}catch(IOException e){
 			e.printStackTrace();
 		}catch(NullPointerException e){

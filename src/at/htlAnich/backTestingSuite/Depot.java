@@ -1,5 +1,6 @@
 package at.htlAnich.backTestingSuite;
 
+import at.htlAnich.stockUpdater.StockResults;
 import at.htlAnich.tools.database.CanBeTable;
 import org.jetbrains.annotations.NotNull;
 
@@ -8,6 +9,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+
+import static at.htlAnich.tools.BaumbartLogger.loglnf;
 
 /**
  * A Collection of Depot-Rows. A different depot means a different strategy.
@@ -18,10 +21,14 @@ public class Depot implements CanBeTable {
 
 	public static class Point implements Comparable {
 
-		public enum BuyFlag{
+		public static enum BuyFlag{
 			BUY,
 			SELL,
 			UNCHANGED;
+
+			public static BuyFlag valueOf(int i){
+				return values()[i];
+			}
 		}
 
 		private LocalDate mDate	= null;
@@ -32,12 +39,17 @@ public class Depot implements CanBeTable {
 		private float mWorth	= 0.0f;
 		private float mAvg200	= 0.0f;
 		private float mClose	= 0.0f;
+		private float mMoney	= 0.0f;
 
 		public Point(){
-			this(LocalDate.now(), "", BuyFlag.UNCHANGED, 0, 0, 0.0f, 0.0f, 0.0f);
+			this(LocalDate.now(), "", BuyFlag.UNCHANGED, 0, 0, 0.0f, 0.0f, 0.0f, 0.0f);
 		}
 
-		public Point(@NotNull LocalDate date, @NotNull String symbol, BuyFlag flag, int buyAmount, int totalStocks, float totalWorth, float avg200, float close){
+		public Point(Point other){
+			this(other.mDate, other.mSymbol, other.mFlag, other.mBuyAmount, other.mStocks, other.mWorth, other.mAvg200, other.mClose, other.mMoney);
+		}
+
+		public Point(@NotNull LocalDate date, @NotNull String symbol, BuyFlag flag, int buyAmount, int totalStocks, float totalWorth, float avg200, float close, float money){
 			mDate = date;
 			mSymbol = symbol;
 			mFlag = (flag == null) ? BuyFlag.UNCHANGED : flag;
@@ -48,6 +60,39 @@ public class Depot implements CanBeTable {
 			mWorth = Math.abs(totalWorth);
 			mAvg200 = avg200;
 			mClose = close;
+			mMoney = money;
+		}
+
+		public Point clone(){
+			return new Point(this);
+		}
+
+		public void setMoney(float money){
+			this.mMoney = money;
+		}
+
+		public void setDate(LocalDate date){
+			this.mDate = date;
+		}
+
+		public void setBuyFlag(BuyFlag flag){
+			this.mFlag = flag;
+		}
+
+		public void setStocks(int stocks){
+			this.mStocks = stocks;
+		}
+
+		public void setWorth(float worth){
+			this.mWorth = worth;
+		}
+
+		public void setAvg200(float avg200){
+			this.mAvg200 = avg200;
+		}
+
+		public void setClose(float close){
+			this.mClose = close;
 		}
 
 		@NotNull
@@ -63,6 +108,10 @@ public class Depot implements CanBeTable {
 		@NotNull
 		public BuyFlag getFlag() {
 			return mFlag;
+		}
+
+		public float getMoney(){
+			return mMoney;
 		}
 
 		public int getBuyAmount() {
@@ -125,12 +174,21 @@ public class Depot implements CanBeTable {
 		Strategy(){}
 		Strategy(int delay){ delayBetweenBuys = delay; }
 		public Integer delayBetweenDays(){return delayBetweenBuys<1 ? null : delayBetweenBuys;}
+		public static Strategy valueOf(int i){
+			return values()[i];
+		}
 	}
 
 	public Depot(Strategy strat, Point... points){
-		var sortedTemp = Arrays.asList(points);
+		var sortedTemp = new LinkedList<Point>();
+
+		for(var p : points){
+			sortedTemp.add(p);
+		}
+
 		Collections.sort(sortedTemp);
-		this.mPoints.addAll(mPoints);
+		this.mPoints = sortedTemp;
+		//this.mPoints.addAll(sortedTemp);
 		this.mStrategy = strat;
 	}
 
@@ -239,13 +297,7 @@ public class Depot implements CanBeTable {
 	 * @param point the point, that will be added.
 	 */
 	public void addDepotPoint(Point point){
-		int index = 0;
-		for( ; index < mPoints.size(); ++index){
-			if(point.getDate().isBefore(mPoints.get(index).getDate())){
-				break;
-			}
-		}
-		mPoints.add(index, point);
+		mPoints.add(point);
 	}
 
 	/**

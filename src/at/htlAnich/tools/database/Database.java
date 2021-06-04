@@ -11,7 +11,7 @@ public abstract class Database {
 		mDatabase	= "";
 
 	protected static String createConnectionString(String hostname, String database, String user, String pass){
-		return String.format("jdbc:mysql://%s/%s?user=%s&password=%s?serverTimezone=UTC",
+		return String.format("jdbc:mysql://%s/%s?user=%s&password=%s?serverTimezone=UTC?autoReconnect=true&useSSL=false",
 			hostname, database, user, pass);
 	}
 

@@ -1,15 +1,16 @@
 package at.htlAnich.backTestingSuite;
 
+import at.htlAnich.stockUpdater.StockDatabase;
 import at.htlAnich.tools.database.Database;
 
-import java.sql.Date;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.sql.*;
+import java.time.LocalDate;
+import java.util.LinkedList;
 
 import static at.htlAnich.tools.BaumbartLogger.logf;
+import static at.htlAnich.tools.BaumbartLogger.loglnf;
 
-public class BackTestingDatabase extends Database {
+public class BackTestingDatabase extends StockDatabase {
 	public static final String _TABLE_NAME = "backtesting_depot";
 
 	public static enum DatabaseNames_Backtesting{
@@ -20,7 +21,9 @@ public class BackTestingDatabase extends Database {
 		stocks,
 		worth,
 		close,
-		avg;
+		avg,
+		money,
+		strat;
 
 		@Override
 		public String toString(){
@@ -28,6 +31,7 @@ public class BackTestingDatabase extends Database {
 		}
 	}
 
+	@Override
 	public void createTable(String tableName) throws SQLException{
 		var stmnt = mConnection.prepareStatement(String.format(
 			"CREATE TABLE IF NOT EXISTS %s " +
@@ -38,7 +42,11 @@ public class BackTestingDatabase extends Database {
 				"%s INTEGER NOT NULL," +		// backtesting_stocks
 				"%s FLOAT NOT NULL," +			// backtesting_worth
 				"%s FLOAT NOT NULL," +			// backtesting_close
-				"%s FLOAT NOT NULL);",			// backtesting_avg
+				"%s FLOAT NOT NULL," +			// backtesting_avg
+				"%s FLOAT NOT NULL," +			// backtesting_money
+				"%s INTEGER NOT NULL," +		// backtesting_strat
+				"primary key(%s, %s, %s));",	// pk = date+symbol+strat
+			_TABLE_NAME,
 			DatabaseNames_Backtesting.date.toString(),
 			DatabaseNames_Backtesting.symbol.toString(),
 			DatabaseNames_Backtesting.buyFlag.toString(),
@@ -46,13 +54,129 @@ public class BackTestingDatabase extends Database {
 			DatabaseNames_Backtesting.stocks.toString(),
 			DatabaseNames_Backtesting.worth.toString(),
 			DatabaseNames_Backtesting.close.toString(),
-			DatabaseNames_Backtesting.avg.toString()
+			DatabaseNames_Backtesting.avg.toString(),
+			DatabaseNames_Backtesting.money.toString(),
+			DatabaseNames_Backtesting.strat.toString(),
+			// Primary key
+			DatabaseNames_Backtesting.date.toString(),
+			DatabaseNames_Backtesting.symbol.toString(),
+			DatabaseNames_Backtesting.strat.toString()
 		));
 		stmnt.execute();
 	}
 
-	public Depot getValues(String symbol, Depot.Strategy strategy){
-		return new Depot();
+	public void initTable(String symbol) throws SQLException{
+		// if there is less than or exactly 1 entry,
+		var stmnt = mConnection.prepareStatement(String.format(
+			"SELECT COUNT(*) AS 'my_entries' FROM %s;",
+			_TABLE_NAME
+		));
+
+		var rs = stmnt.executeQuery();
+		rs.next();
+		var needToInit = rs.getInt("my_entries") <= 1;
+		rs.close();
+
+		if(!needToInit){
+			return;
+		}
+
+		// load all symbols
+		LinkedList<String> symbols = new LinkedList<String>();
+		stmnt = mConnection.prepareStatement(String.format(
+			"select %s as 'symbol' from %s;",
+			DatabaseNames_Backtesting.symbol, _TABLE_NAME
+		));
+		symbols.add(symbol);
+		rs = stmnt.executeQuery();
+		while(rs.next()){
+			symbols.add(rs.getString("symbol"));
+		}
+
+		// date, symbol and strat are the primary keys and thus need a value to be set or likely
+		// TODO: rework BackTestingDatabase.initTable()
+
+		for(var s : symbols){
+			for(var strat : Depot.Strategy.values()) {
+
+				stmnt = mConnection.prepareStatement(String.format(
+					"INSERT into %s (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+					_TABLE_NAME,
+					DatabaseNames_Backtesting.date,
+					DatabaseNames_Backtesting.symbol,
+					DatabaseNames_Backtesting.strat,
+					DatabaseNames_Backtesting.money,
+					DatabaseNames_Backtesting.buyFlag,
+					DatabaseNames_Backtesting.delta,
+					DatabaseNames_Backtesting.stocks,
+					DatabaseNames_Backtesting.worth,
+					DatabaseNames_Backtesting.close,
+					DatabaseNames_Backtesting.avg
+				));
+				stmnt.setDate(1, Date.valueOf(LocalDate.of(1970, 01, 01)));
+				stmnt.setString(2, s);
+				stmnt.setInt(3, strat.ordinal());
+				stmnt.setFloat(4, 100_000);
+				stmnt.setInt(5, Depot.Point.BuyFlag.UNCHANGED.ordinal());
+				stmnt.setInt(6, 0);
+				stmnt.setInt(7, 0);
+				stmnt.setFloat(8, 0.0f);
+				stmnt.setFloat(9, 0.0f);
+				stmnt.setFloat(10, 0.0f);
+				stmnt.execute();
+			}
+		}
+	}
+
+	public Depot getValues(String symbol, Depot.Strategy strategy) throws SQLException{
+		createTable(_TABLE_NAME);
+		Depot dep = new Depot(strategy);
+
+		var stmntText = String.format(
+			"select %s, %s, %s, %s, %s, %s, %s, %s, %s from %s where " +
+			"%s=? and %s=?;",
+			DatabaseNames_Backtesting.date.toString(),
+			DatabaseNames_Backtesting.symbol.toString(),
+			DatabaseNames_Backtesting.buyFlag.toString(),
+			DatabaseNames_Backtesting.delta.toString(),
+			DatabaseNames_Backtesting.stocks.toString(),
+			DatabaseNames_Backtesting.worth.toString(),
+			DatabaseNames_Backtesting.avg.toString(),
+			DatabaseNames_Backtesting.close.toString(),
+			DatabaseNames_Backtesting.money.toString(),
+			// from
+			_TABLE_NAME,
+			// where
+			DatabaseNames_Backtesting.symbol.toString(),
+			DatabaseNames_Backtesting.strat.toString()
+		);
+
+		var stmnt = mConnection.prepareStatement(stmntText);
+
+		stmnt.setString(1, symbol);
+		stmnt.setInt(2, strategy.ordinal());
+
+		var rs = stmnt.executeQuery();
+
+		// Process from db into program
+
+		while (rs.next()) {
+			var date = rs.getDate(DatabaseNames_Backtesting.date.toString()).toLocalDate();
+			var buyFlag = Depot.Point.BuyFlag.valueOf(rs.getInt(DatabaseNames_Backtesting.buyFlag.toString()));
+			var delta = rs.getInt(DatabaseNames_Backtesting.delta.toString());
+			var stocks = rs.getInt(DatabaseNames_Backtesting.stocks.toString());
+			var worth = rs.getFloat(DatabaseNames_Backtesting.worth.toString());
+			var avg = rs.getFloat(DatabaseNames_Backtesting.avg.toString());
+			var close = rs.getFloat(DatabaseNames_Backtesting.close.toString());
+			//var strat = Depot.Strategy.valueOf(rs.getInt(DatabaseNames_Backtesting.strat.toString())); // mistake by myself
+			var money = rs.getFloat(DatabaseNames_Backtesting.money.toString());
+
+			var depPoint = new Depot.Point(date, symbol, buyFlag, delta, stocks, worth, avg, close, money);
+
+			dep.addDepotPoint(depPoint);
+		}
+
+		return dep;
 	}
 
 	public BackTestingDatabase(){
@@ -67,7 +191,7 @@ public class BackTestingDatabase extends Database {
 		super(hostname, user, password, database);
 	}
 
-	@Override
+	/*@Override
 	public void connect() throws SQLException {
 
 		if(mConnection != null){
@@ -81,7 +205,7 @@ public class BackTestingDatabase extends Database {
 			mHostname, mDatabase, mUser, mPassword
 		));
 		return;
-	}
+	}*/
 
 	public void updateDepots(Depot dep, String symbol) throws SQLException{
 		createDatabase();
@@ -97,8 +221,9 @@ public class BackTestingDatabase extends Database {
 			// backtesting_worth
 			// backtesting_close
 			// backtesting_avg
+			// backtesting_money
 			StringBuilder stmntText = new StringBuilder(String.format(
-				"INSERT INTO %s (%s, %s, %s, %s, %s, %s, %s) VALUES (? ? ? ? ? ? ?) ON DUPLICATE KEY UPDATE %s=?, %s=?, %s=?, %s=?;",
+				"INSERT INTO %s (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE %s=?, %s=?, %s=?, %s=?, %s=?, %s=?, %s=?;",
 				dep.getTableName(),
 				DatabaseNames_Backtesting.date.toString(),
 				DatabaseNames_Backtesting.symbol.toString(),
@@ -108,25 +233,47 @@ public class BackTestingDatabase extends Database {
 				DatabaseNames_Backtesting.worth.toString(),
 				DatabaseNames_Backtesting.close.toString(),
 				DatabaseNames_Backtesting.avg.toString(),
+				DatabaseNames_Backtesting.money.toString(),
+				DatabaseNames_Backtesting.strat.toString(),
 				// VALUES...ON DUPLICATE KEY UPDATE
 				DatabaseNames_Backtesting.buyFlag.toString(),
 				DatabaseNames_Backtesting.delta.toString(),
 				DatabaseNames_Backtesting.stocks.toString(),
 				DatabaseNames_Backtesting.worth.toString(),
 				DatabaseNames_Backtesting.close.toString(),
-				DatabaseNames_Backtesting.avg.toString()
+				DatabaseNames_Backtesting.avg.toString(),
+				DatabaseNames_Backtesting.money.toString()
 			));
 
 			stmnt = mConnection.prepareStatement(stmntText.toString());
 
-			stmnt.setDate(1, Date.valueOf(point.getDate()));
-			stmnt.setString(2, symbol);
-			stmnt.setInt(3, point.getFlag().ordinal());
+			var i = 1;
+			stmnt.setDate(i++, Date.valueOf(point.getDate()));
+			stmnt.setString(i++, symbol);
+			stmnt.setInt(i++, point.getFlag().ordinal());	// backtesting_buyFlag
+			stmnt.setFloat(i++, point.getBuyAmount());		// backtesting_delta
+			stmnt.setInt(i++, point.getStocks());				// backtesting_stocks
+			stmnt.setFloat(i++, point.getWorth());			// backtesting_worth
+			stmnt.setFloat(i++, point.getClose());			// backtesting_close
+			stmnt.setFloat(i++, point.getAvg200());			// backtesting_avg
+			stmnt.setFloat(i++, point.getMoney());		// backtesting_money
+			stmnt.setInt(i++, dep.mStrategy.ordinal());	// backtesting_strat
+			// VALUES...ON DUPLICATE KEY UPDATE
+			stmnt.setInt(i++, point.getFlag().ordinal());	// backtesting_buyFlag
+			stmnt.setFloat(i++, point.getBuyAmount());		// backtesting_delta
+			stmnt.setInt(i++, point.getStocks());				// backtesting_stocks
+			stmnt.setFloat(i++, point.getWorth());			// backtesting_worth
+			stmnt.setFloat(i++, point.getClose());			// backtesting_close
+			stmnt.setFloat(i++, point.getAvg200());			// backtesting_avg
+			stmnt.setFloat(i++, point.getMoney());			// backtesting_money
 
+			loglnf(stmnt.toString());
+			stmnt.executeUpdate();
 		}
+		return;
 	}
 
-	@Override
+	/*@Override
 	public void disconnect() throws SQLException {
 		if(mConnection == null || mConnection.isClosed()){
 			logf("Connection already closed.");
@@ -136,9 +283,9 @@ public class BackTestingDatabase extends Database {
 		mConnection.close();
 		mConnection = null;
 		return;
-	}
+	}*/
 
-	@Override
+	/*@Override
 	public void createDatabase(String database) throws SQLException {
 		var stmnt = mConnection.prepareStatement(String.format(
 			"CREATE DATABASE IF NOT EXISTS %s",
@@ -146,7 +293,7 @@ public class BackTestingDatabase extends Database {
 		));
 		stmnt.execute();
 		return;
-	}
+	}*/
 
 	@Override
 	public Database clone() {

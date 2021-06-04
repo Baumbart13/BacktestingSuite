@@ -49,7 +49,9 @@ public class StockDataPoint {
 	 * @see ValueType
 	 */
 	public float getValue(ValueType type){
-		return getValue(type, 200);
+		var temp = mValues.get(type);
+		return (temp == null) ? 0.0f : temp;
+		//return getValue(type, 200);
 	}
 
 	/**
@@ -84,7 +86,7 @@ public class StockDataPoint {
 	 * @see ValueType
 	 */
 	public void setValue(ValueType type, float value){
-		setValue(type, value, 200);
+		mValues.put(type, value);
 	}
 
 	public Long[] getAverages(){
