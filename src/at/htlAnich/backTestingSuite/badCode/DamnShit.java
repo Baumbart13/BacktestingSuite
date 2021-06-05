@@ -82,7 +82,7 @@ public class DamnShit {
 		// create diagram of backtesting-strategies
 		drawChart(depotData, stockData.getSymbol());
 
-		return depotData;
+		return depotData.get(0);
 	}
 
 	public void deleteIrrelevantDates(StockResults res, LocalDate start, LocalDate end){

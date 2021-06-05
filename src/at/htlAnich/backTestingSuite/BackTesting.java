@@ -1,9 +1,7 @@
 package at.htlAnich.backTestingSuite;
 
 import java.sql.SQLException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 
 import at.htlAnich.backTestingSuite.badCode.DamnShit;
 import at.htlAnich.tools.BaumbartLogger;
@@ -12,6 +10,7 @@ import static at.htlAnich.tools.BaumbartLogger.*;
 
 
 public class BackTesting {
+	public static Queue<String> requests = new LinkedList<>();
 	public static Scanner cliInput = new Scanner(System.in);
 	public static at.htlAnich.backTestingSuite.badCode.DamnShit damn;
 	public static GUI inputScreen;

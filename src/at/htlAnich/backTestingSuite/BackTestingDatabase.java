@@ -130,7 +130,7 @@ public class BackTestingDatabase extends StockDatabase {
 
 	public Depot getValues(String symbol, Depot.Strategy strategy) throws SQLException{
 		createTable(_TABLE_NAME);
-		Depot dep = new Depot(strategy);
+		Depot dep = new Depot(symbol, strategy);
 
 		var stmntText = String.format(
 			"select %s, %s, %s, %s, %s, %s, %s, %s, %s from %s where " +
@@ -171,9 +171,9 @@ public class BackTestingDatabase extends StockDatabase {
 			//var strat = Depot.Strategy.valueOf(rs.getInt(DatabaseNames_Backtesting.strat.toString())); // mistake by myself
 			var money = rs.getFloat(DatabaseNames_Backtesting.money.toString());
 
-			var depPoint = new Depot.Point(date, symbol, buyFlag, delta, stocks, worth, avg, close, money);
+			var depPoint = new Depot.Point(date, buyFlag, delta, stocks, worth, avg, close, money);
 
-			dep.addDepotPoint(depPoint);
+			dep.getData().add(depPoint);
 		}
 
 		return dep;

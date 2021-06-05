@@ -18,6 +18,7 @@ import static at.htlAnich.tools.BaumbartLogger.loglnf;
 public class Depot implements CanBeTable {
 	protected List<Point> mPoints = null;
 	protected Strategy mStrategy = null;
+	protected String mSymbol = null;
 
 	public static class Point implements Comparable {
 
@@ -31,27 +32,25 @@ public class Depot implements CanBeTable {
 			}
 		}
 
-		private LocalDate mDate	= null;
-		private String mSymbol	= null;
-		private BuyFlag mFlag	= null;
-		private int mBuyAmount	= 0;
-		private int mStocks	= 0;
-		private float mWorth	= 0.0f;
-		private float mAvg200	= 0.0f;
-		private float mClose	= 0.0f;
-		private float mMoney	= 0.0f;
+		public LocalDate mDate	= null;
+		public BuyFlag mFlag	= null;
+		public int mBuyAmount	= 0;
+		public int mStocks	= 0;
+		public float mWorth	= 0.0f;
+		public float mAvg200	= 0.0f;
+		public float mClose	= 0.0f;
+		public float mMoney	= 0.0f;
 
 		public Point(){
-			this(LocalDate.now(), "", BuyFlag.UNCHANGED, 0, 0, 0.0f, 0.0f, 0.0f, 0.0f);
+			this(LocalDate.now(), BuyFlag.UNCHANGED, 0, 0, 0.0f, 0.0f, 0.0f, 0.0f);
 		}
 
 		public Point(Point other){
-			this(other.mDate, other.mSymbol, other.mFlag, other.mBuyAmount, other.mStocks, other.mWorth, other.mAvg200, other.mClose, other.mMoney);
+			this(other.mDate, other.mFlag, other.mBuyAmount, other.mStocks, other.mWorth, other.mAvg200, other.mClose, other.mMoney);
 		}
 
-		public Point(@NotNull LocalDate date, @NotNull String symbol, BuyFlag flag, int buyAmount, int totalStocks, float totalWorth, float avg200, float close, float money){
+		public Point(@NotNull LocalDate date, BuyFlag flag, int buyAmount, int totalStocks, float totalWorth, float avg200, float close, float money){
 			mDate = date;
-			mSymbol = symbol;
 			mFlag = (flag == null) ? BuyFlag.UNCHANGED : flag;
 			mFlag = flag;
 			// Let's stay positive
@@ -65,73 +64,6 @@ public class Depot implements CanBeTable {
 
 		public Point clone(){
 			return new Point(this);
-		}
-
-		public void setMoney(float money){
-			this.mMoney = money;
-		}
-
-		public void setDate(LocalDate date){
-			this.mDate = date;
-		}
-
-		public void setBuyFlag(BuyFlag flag){
-			this.mFlag = flag;
-		}
-
-		public void setStocks(int stocks){
-			this.mStocks = stocks;
-		}
-
-		public void setWorth(float worth){
-			this.mWorth = worth;
-		}
-
-		public void setAvg200(float avg200){
-			this.mAvg200 = avg200;
-		}
-
-		public void setClose(float close){
-			this.mClose = close;
-		}
-
-		@NotNull
-		public LocalDate getDate() {
-			return mDate;
-		}
-
-		@NotNull
-		public String getSymbol() {
-			return mSymbol;
-		}
-
-		@NotNull
-		public BuyFlag getFlag() {
-			return mFlag;
-		}
-
-		public float getMoney(){
-			return mMoney;
-		}
-
-		public int getBuyAmount() {
-			return mBuyAmount;
-		}
-
-		public int getStocks() {
-			return mStocks;
-		}
-
-		public float getWorth() {
-			return mWorth;
-		}
-
-		public float getAvg200(){
-			return mAvg200;
-		}
-
-		public float getClose(){
-			return mClose;
 		}
 
 		/**
@@ -152,9 +84,7 @@ public class Depot implements CanBeTable {
 		public int compareTo(@NotNull Object o) {
 			if(o.getClass().equals(this.getClass())) {
 				var temp = (Point)o;
-				if(temp.mSymbol.equals(this.mSymbol)) {
-					return this.mDate.compareTo(temp.mDate);
-				}
+				return this.mDate.compareTo(temp.mDate);
 			}
 			return this.toString().compareTo(o.toString());
 		}
@@ -179,7 +109,7 @@ public class Depot implements CanBeTable {
 		}
 	}
 
-	public Depot(Strategy strat, Point... points){
+	public Depot(String symbol, Strategy strat, Point... points){
 		var sortedTemp = new LinkedList<Point>();
 
 		for(var p : points){
@@ -190,6 +120,7 @@ public class Depot implements CanBeTable {
 		this.mPoints = sortedTemp;
 		//this.mPoints.addAll(sortedTemp);
 		this.mStrategy = strat;
+		this.mSymbol = symbol;
 	}
 
 	/**
@@ -198,130 +129,31 @@ public class Depot implements CanBeTable {
 	public Depot(){
 		mPoints = new LinkedList<>();
 		mStrategy = Strategy.NONE;
+		mSymbol = "";
 	}
 
 	/**
-	 * Returns all <code>DepotPoints</code> from a specific date, no matter what stock it is.
-	 * @param date The specific date.
-	 * @return a collection of <code>DepotPoints</code> of one day.
+	 * Returns all <code>DepotPoint</code>s.
+	 * @return the same collection of <code>DepotPoint</code>s as in this object.
 	 */
-	public List<Point> getAll(LocalDate date){
-		List<Point> out = new LinkedList<>();
-		for(var point : mPoints){
-			if(point.getDate().equals(date)){
-				out.add(point);
-			}
+	public List<Point> getData(){
+		return mPoints;
+	}
+	
+	public void addPoint(Depot.Point point){
+		var pointDate = point.mDate;
+		var i = 0;
+		
+		var currDay = this.mPoints.get(i).mDate;
+		while(currDay.isBefore(pointDate)){
+			currDay = this.mPoints.get(++i).mDate;
 		}
-		return out;
+		
+		mPoints.add(i, point);
 	}
-
-	/**
-	 * Returns all <code>DepotPoints</code> from a specific stock, no matter what date it is.
-	 * @param symbol The ticker-name of the stock.
-	 * @return a collection of <code>DepotPoints</code> of one stock.
-	 * @see at.htlAnich.stockUpdater.api.ApiParser.Function LISTING_STATUS.
-	 */
-	public List<Point> getAll(String symbol){
-		List<Point> out = new LinkedList<>();
-		for(var point : mPoints){
-			if(point.getSymbol().equals(symbol)){
-				out.add(point);
-			}
-		}
-		return out;
-	}
-
-	/**
-	 * Returns a <code>DepotPoint</code> from a specific stock and a specific date.
-	 * @param symbol The ticker-name of the stock.
-	 * @param date The date of the <code>DepotPoint</code>.
-	 * @return if there is an entry, then <code>DepotPoint</code> of given stock and date will be returned, else an empty
-	 * <code>DepotPoint</code>-Object.
-	 */
-	public Point getPoint(String symbol, LocalDate date){
-		for(var point : mPoints){
-			if(point.getSymbol().equals(symbol) && point.getDate().equals(date)){
-				return point;
-			}
-		}
-		return new Point();
-	}
-
-	/**
-	 * Returns the number of elements, that are inside of this <code>Depot</code>-object.
-	 * @return a non-negative integer holding the amount of elements inside this object.
-	 */
-	public int numberOfElements(){
-		return this.mPoints.size();
-	}
-
-	/**
-	 * Returns a <code>DepotPoint</code> at given index.
-	 * @param i the index of the element, that will be returned.
-	 * @return if <code>i</code> is greater than or equals <code>numberOfElements</code> an empty <code>DepotPoint</code>
-	 * will be returned, otherwise the requested one.
-	 */
-	public Point getPoint(int i){
-		if(i >= mPoints.size()){
-			return new Point();
-		}
-		return mPoints.get(i);
-	}
-
-	/**
-	 * Returns the index of the corresponding tickerSymbol and date.
-	 * @param symbol the ticker of the stock.
-	 * @param date the date of the <code>DepotPoint</code>.
-	 * @return a non-negative integer, if there is an element. Otherwise <code>-1</code> will be returned.
-	 */
-	public int getIndexOfPoint(String symbol, LocalDate date){
-		for(int i = 0; i < mPoints.size(); ++i){
-			if(mPoints.get(i).getSymbol().equals(symbol) && mPoints.get(i).getDate().equals(date)){
-				return i;
-			}
-		}
-		return -1;
-	}
-
-	/**
-	 * Returns the index of the corresponding <code>DepotPoint</code>.
-	 * @param point the <code>DepotPoint</code> which index will be looked up.
-	 * @return a non-negative integer, if there is an element. Otherwise <code>-1</code> will be returned.
-	 */
-	public int getIndexOfPoint(Point point){
-		return getIndexOfPoint(point.getSymbol(), point.getDate());
-	}
-
-	/**
-	 * A <code>DepotPoint</code> will be added to this <code>Depot</code>.
-	 * @param point the point, that will be added.
-	 */
-	public void addDepotPoint(Point point){
-		mPoints.add(point);
-	}
-
-	/**
-	 * Removes the first entry of given <code>DepotPoint</code>.
-	 * @param point the element, that shall be removed.
-	 * @return <code>true</code> if the element existed.
-	 */
-	public boolean removeDepotPoint(Point point){
-		return mPoints.remove(point);
-	}
-
-	/**
-	 * Removes the entry at given index if
-	 * @param index the index of element, that shall be removed.
-	 * @return <code>true</code> if the element existed. <code>false</code> if <code>inde</code>
-	 */
-	public boolean removeDepotPoint(int index){
-		if(index >= mPoints.size()) return false;
-		var x = mPoints.remove(index);
-		return (x != null);
-	}
-
-	public Point popDepotPoint(int index){
-		return mPoints.remove(index);
+	
+	public String getSymbol(){
+		return mSymbol;
 	}
 
 	@Override

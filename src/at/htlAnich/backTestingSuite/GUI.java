@@ -3,9 +3,10 @@ package at.htlAnich.backTestingSuite;
 import at.htlAnich.tools.Environment;
 
 import javax.swing.*;
+import java.awt.*;
 
 public class GUI {
-	protected JFrame MainWindow;
+	protected JFrame MainWindow = new JFrame();
 	public int height = 420;
 	public int width = 420;
 	public int x = (int)Environment.getDesktopWidth_Single() - (width/2);
@@ -26,10 +27,29 @@ public class GUI {
 	}
 
 	public void createComponents(){
-		//MainWindow.setLayout(new FlowLayout(FlowLayout.LEADING));
+		MainWindow.setLayout(new BorderLayout());
 		MainWindow.setVisible(true);
 		var panel = new JPanel();
+
+		// input-textField for start-date
+		// input-textField for end-date
+		// input-textField for start-cash
+		var in_startDate = new JTextField("Start date (including)");
+		var in_endDate = new JTextField("End date (excluding)");
+		var in_startCash = new JTextField("Start amount of money");
+
+		// start everything-button
+		var btn_start = new JButton("Start the simulation");
+
+		panel.add(in_startDate);
+		panel.add(in_startCash);
+		panel.add(in_endDate);
+		panel.add(btn_start);
+
+
 		panel.setSize(MainWindow.getSize());
+		panel.setLayout(new GridLayout(3,3));
+		panel.setVisible(true);
 	}
 
 	public void createMenu(){
