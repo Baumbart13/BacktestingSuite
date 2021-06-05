@@ -115,7 +115,7 @@ public class DamnShit {
 			xAxis.add(new LinkedList<>());
 			yAxis.add(new LinkedList<>());
 
-			for(var i = 0; i < depo.getAll(symbol).size(); ++i){
+			for(var i = 0; i < depo.getData().size(); ++i){
 				// TODO: continue implementing xChart
 			}
 		}

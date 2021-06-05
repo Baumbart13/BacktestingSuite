@@ -128,7 +128,8 @@ public class BackTestingDatabase extends StockDatabase {
 		}
 	}
 
-	public Depot getValues(String symbol, Depot.Strategy strategy) throws SQLException{
+	//TODO: rewrite getValues
+	/*public Depot getValues(String symbol, Depot.Strategy strategy) throws SQLException{
 		createTable(_TABLE_NAME);
 		Depot dep = new Depot(symbol, strategy);
 
@@ -177,7 +178,7 @@ public class BackTestingDatabase extends StockDatabase {
 		}
 
 		return dep;
-	}
+	}*/
 
 	public BackTestingDatabase(){
 		this("","","","");
@@ -207,7 +208,8 @@ public class BackTestingDatabase extends StockDatabase {
 		return;
 	}*/
 
-	public void updateDepots(Depot dep, String symbol) throws SQLException{
+	// TODO: rewrite updateDepots
+	/*public void updateDepots(Depot dep, String symbol) throws SQLException{
 		createDatabase();
 		createTable(dep.getTableName());
 
@@ -271,7 +273,7 @@ public class BackTestingDatabase extends StockDatabase {
 			stmnt.executeUpdate();
 		}
 		return;
-	}
+	}*/
 
 	/*@Override
 	public void disconnect() throws SQLException {
