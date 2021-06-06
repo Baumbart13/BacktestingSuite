@@ -26,14 +26,16 @@ import static at.htlAnich.tools.BaumbartLogger.loglnf;
 
 public class DamnShit {
 	protected String mSymbol;
+	protected float mTotalMoney;
 	protected boolean mInProduction;
 	protected StockDatabase mStockDb;
 	protected BackTestingDatabase mBacktestDb;
 
 	public static BaumbartLoggerGUI mLogGui = new BaumbartLoggerGUI("Detailed Log");
 
-	public DamnShit(String symbol, boolean inProduction){
+	public DamnShit(String symbol, float totalMoney, boolean inProduction){
 		mSymbol = symbol;
+		mTotalMoney = totalMoney;
 		mInProduction = inProduction;
 	}
 
@@ -66,8 +68,13 @@ public class DamnShit {
 		// get depotData(Depot-Object) from database
 		var depotData = readFromDepotDb(stockData);
 
+		// update depotData
+		for(var i = 0; i<depotData.size(); ++i) {
+			updateDepotValues(depotData.get(i), stockData);
+		}
+
 		// trade on depotData
-		// ATTENTION:	don't forget splitcorrection, which has to
+		// ATTENTION:	don't forget splitCorrection, which has to
 		// 		be done backwards, but trading is forwards!!
 		for(var dep : depotData){
 			if(dep.getStrategy().equals(Depot.Strategy.NONE)){
@@ -83,6 +90,34 @@ public class DamnShit {
 		drawChart(depotData, stockData.getSymbol());
 
 		return depotData.get(0);
+	}
+
+	public void updateDepotValues(Depot dep, StockResults stockRes){
+		for(int i = 0; i < stockRes.getDataPoints().size(); ++i){
+			var currDepPoint = (i < dep.getData().size()) ? dep.getData().get(i) : null;
+			var currStockPoint = stockRes.getDataPoints().get(i);
+
+			// definitely easier to read, instead of using the ternary operator instead of setting it first
+			// null, then check for null and then set new DepotPoint
+			if(currDepPoint != null){
+				if(currDepPoint.mDate.isEqual(currStockPoint.mDateTime.toLocalDate())){
+					continue;
+				}
+				currDepPoint.mDate = currStockPoint.mDateTime.toLocalDate();
+			}
+
+
+			currDepPoint = new Depot.Point(
+				currStockPoint.mDateTime.toLocalDate(),
+				Depot.Point.BuyFlag.UNCHANGED,
+				0,
+				dep.getData().get(i-1).mStocks,
+				dep.getData().get(i-1).mWorth,
+				currStockPoint.getValue(StockDataPoint.ValueType.avg200),
+				currStockPoint.getValue(StockDataPoint.ValueType.close_adjusted),
+				dep.getData().get(i-1).mMoney);
+			dep.getData().add(currDepPoint);
+		}
 	}
 
 	public void deleteIrrelevantDates(StockResults res, LocalDate start, LocalDate end){
@@ -141,6 +176,11 @@ public class DamnShit {
 		return;
 	}
 
+	/**
+	 * Returns a collection of <code>Depot</code>s objects, which vary in the strategy, that is used.
+	 * @param res a reference to load the same stock as previously used in the program.
+	 * @return
+	 */
 	public List<Depot> readFromDepotDb(StockResults res){
 		var deps = new LinkedList<Depot>();
 
@@ -177,7 +217,7 @@ public class DamnShit {
 	}
 
 	public StockResults fetchFromAPI(){
-		StockResults res = null;
+		StockResults res = new StockResults("ERROR");
 		try {
 			mLogGui.loglnf("Fetching from API");
 			//var creds = CredentialLoader.loadApi(mInProduction);
@@ -188,6 +228,9 @@ public class DamnShit {
 		}catch(IOException e){
 			e.printStackTrace();
 		}
+
+		res.splitCorrection();
+		res.calcAverage();
 
 		return res;
 	}

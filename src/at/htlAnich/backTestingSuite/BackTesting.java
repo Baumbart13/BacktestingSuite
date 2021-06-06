@@ -1,6 +1,12 @@
 package at.htlAnich.backTestingSuite;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.nio.Buffer;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.*;
 
 import at.htlAnich.backTestingSuite.badCode.DamnShit;
@@ -31,6 +37,10 @@ public class BackTesting {
 					logf("We are in production now%n");
 					inProd = true;
 					break;
+				case file:
+					logf("Request from file%n");
+					loadSymbols();
+					break;
 				case DEBUG:
 					logf("DEBUG suite entered%n");
 					break;
@@ -38,18 +48,32 @@ public class BackTesting {
 		}
 	}
 
+	public static LocalDate parseDate(String s){
+		var year = Integer.parseInt(s.substring(0, s.indexOf(" ")));
+		var month = Integer.parseInt(s.substring(s.indexOf(" ") + 1, s.lastIndexOf(" ")));
+		var day = Integer.parseInt(s.substring(s.lastIndexOf(" ")+1));
+
+		return LocalDate.of(year, month, day);
+	}
+
 	public static void main(String[] args) {
 		try {
 			argumentHandling(Arrays.asList(args));
-			inputScreen = new GUI();
-			logf("Please enter your wanted stock: ");
-			var symbol = cliInput.nextLine();
+			//inputScreen = new GUI();
+			logf("Please enter your starting date [yyyy mm dd]: ");
+			var startDate = parseDate(cliInput.nextLine());
+			logf("%nPlease enter your last date [yyyy mm dd]: ");
+			var endDate = parseDate(cliInput.nextLine());
+			logf("%nPlease enter your total money you want to spend on each stock: ");
+			var totalMoney = cliInput.nextFloat();
 
-			//damn = new DamnShit(symbol, inProd);
-			//damn.getValuesAndUpdateDatabase();
-			System.out.println("DamnShit ended");
+			for(int i = 0; i < requests.size(); ++i) {
+				damn = new DamnShit(requests.poll(), totalMoney, inProd);
+				damn.getValuesAndUpdateDatabase(LocalDate.MIN, LocalDate.now());
+				System.out.println("DamnShit ended");
+			}
 
-			System.out.println("Waiting to eneter something to exit program");
+			System.out.println("Waiting to enter something to exit program");
 			waitForKeyPress();
 			System.exit(0);
 		}catch(Exception e){
@@ -76,5 +100,35 @@ public class BackTesting {
 			e.printStackTrace();
 		}*/
 
+	}
+
+	public static void loadSymbols(){
+		var file = "res\\backtesting_requests.backtest";
+
+		BufferedReader reader = null;
+		try {
+			reader = new BufferedReader(new FileReader(file));
+
+			var line = "";
+			while((line = reader.readLine()) != null){
+				line = line.trim();
+				if(line.equals("")){
+					continue;
+				}
+				requests.add(line);
+			}
+		}catch(IOException e){
+			e.printStackTrace();
+			var fs = System.getProperty("user.dir");
+			errlnf("%nFileSystem: \"%s\"%n",fs);
+		}finally{
+			try{
+				if(reader!=null)
+					reader.close();
+			}catch(IOException ex){
+				errlnf("Well, I can't help further than this. The file \"%s\" is maybe corrupted now. ¯\\_(ツ)_/¯",
+					new File(file).getAbsolutePath());
+			}
+		}
 	}
 }

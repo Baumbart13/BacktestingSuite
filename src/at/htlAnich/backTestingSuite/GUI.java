@@ -4,6 +4,7 @@ import at.htlAnich.tools.Environment;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
 
 public class GUI {
 	protected JFrame MainWindow = new JFrame();
@@ -53,6 +54,21 @@ public class GUI {
 	}
 
 	public void createMenu(){
+		var bar = new JMenuBar();
+		var exitItem = new JMenuItem("Exit program");
+		exitItem.addActionListener( e -> {
+			System.gc();
+			var allThread = Thread.getAllStackTraces().keySet();
+			for(var t : allThread){
+				if(t.getPriority() == Thread.MAX_PRIORITY ||
+				t.getName().toLowerCase().contains("main") ||
+				t.getState() == Thread.State.TERMINATED) {
+					continue;
+				}
+				t.stop();
+			}
+			System.exit(-1);
+		});
 
 	}
 

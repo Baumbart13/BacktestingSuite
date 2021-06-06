@@ -67,12 +67,23 @@ public final class BaumbartLoggerGUI extends JFrame {
 		var dayOfMonth = Integer.toString(now.getDayOfMonth());
 		var hour = Integer.toString(now.getHour());
 		var minute = Integer.toString(now.getMinute());
-		var seconds = now.getSecond();
+		var seconds = Integer.toString(now.getSecond());
+
+		//trim the seconds
+		seconds = seconds.substring(0, (seconds.contains("."))?seconds.indexOf("."):seconds.length());
+
+		//set correct size
+		month = (month.length() < 2) ? "0".concat(month) : month;
+		dayOfMonth = (dayOfMonth.length() < 2) ? "0".concat(dayOfMonth) : dayOfMonth;
+		hour = (hour.length() < 2) ? "0".concat(hour) : hour;
+		minute = (minute.length() < 2) ? "0".concat(minute) : minute;
+		seconds = (seconds.length() < 2) ? "0".concat(seconds) : seconds;
 
 		var d = String.format(
-			"%s-%s-%s_%s:%s:%d: ",
+			"%s-%s-%s %s:%s:%s: ",
 			year, month, dayOfMonth, hour, minute, seconds
 		);
+
 		textArea.append(d + String.format(s, o));
 	}
 	public void loglnf(String s, Object ... o){

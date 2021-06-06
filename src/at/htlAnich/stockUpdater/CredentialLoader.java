@@ -6,11 +6,11 @@ import java.util.Locale;
 import static at.htlAnich.tools.BaumbartLogger.errf;
 import static at.htlAnich.tools.BaumbartLogger.errlnf;
 
-public final class CredentialLoader {
+public class CredentialLoader {
 	private static BufferedReader reader = null;
 	public static final String csvSeparator = ",";
 	public static final String lineSeparator = System.lineSeparator();
-	private CredentialLoader(){System.err.println("How did you call this? Go away!!"); System.exit(-1);}
+	protected CredentialLoader(){System.err.println("How did you call this? Go away!!"); System.exit(-1);}
 
 	public static class DatabaseCredentials{
 		private String mUser;
