@@ -20,6 +20,8 @@ public class BackTesting {
 	public static Scanner cliInput = new Scanner(System.in);
 	public static at.htlAnich.backTestingSuite.badCode.DamnShit damn;
 	public static GUI inputScreen;
+	private static boolean DEBUG = false;
+	public static boolean DEBUG(){return DEBUG;}
 	private static boolean inProd = false;
 	public static boolean inProduction(){return inProd;}
 
@@ -43,6 +45,7 @@ public class BackTesting {
 					break;
 				case DEBUG:
 					logf("DEBUG suite entered%n");
+					DEBUG = true;
 					break;
 			}
 		}
@@ -60,12 +63,21 @@ public class BackTesting {
 		try {
 			argumentHandling(Arrays.asList(args));
 			//inputScreen = new GUI();
-			logf("Please enter your starting date [yyyy mm dd]: ");
-			var startDate = parseDate(cliInput.nextLine());
-			logf("%nPlease enter your last date [yyyy mm dd]: ");
-			var endDate = parseDate(cliInput.nextLine());
-			logf("%nPlease enter your total money you want to spend on each stock: ");
-			var totalMoney = cliInput.nextFloat();
+			var startDate = LocalDate.now();
+			var endDate = startDate;
+			var totalMoney = 0.0f;
+			if(!DEBUG) {
+				logf("Please enter your starting date [yyyy mm dd]: ");
+				startDate = parseDate(cliInput.nextLine());
+				logf("%nPlease enter your last date [yyyy mm dd]: ");
+				endDate = parseDate(cliInput.nextLine());
+				logf("%nPlease enter your total money you want to spend on each stock: ");
+				totalMoney = cliInput.nextFloat();
+			}else{
+				startDate = LocalDate.of(2021, 5, 6);
+				endDate = LocalDate.of(2021, 6, 5);
+				totalMoney = 100000.0f;
+			}
 
 			for(int i = 0; i < requests.size(); ++i) {
 				damn = new DamnShit(requests.poll(), totalMoney, inProd);
