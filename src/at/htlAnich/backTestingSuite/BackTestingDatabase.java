@@ -34,6 +34,11 @@ public class BackTestingDatabase extends StockDatabase {
 
 	@Override
 	public void createTable(String tableName) throws SQLException{
+		mConnection.prepareStatement(String.format(
+			"DROP TABLE IF EXISTS %s;",
+			_TABLE_NAME
+		)).execute();
+
 		var stmnt = mConnection.prepareStatement(String.format(
 			"CREATE TABLE IF NOT EXISTS %s " +
 				"(%s DATETIME NOT NULL," +		// backtesting_date
@@ -82,50 +87,36 @@ public class BackTestingDatabase extends StockDatabase {
 			return;
 		}
 
-		// load all symbols
-		LinkedList<String> symbols = new LinkedList<String>();
-		stmnt = mConnection.prepareStatement(String.format(
-			"select %s as 'symbol' from %s;",
-			DatabaseNames_Backtesting.symbol, _TABLE_NAME
-		));
-		symbols.add(symbol);
-		rs = stmnt.executeQuery();
-		while(rs.next()){
-			symbols.add(rs.getString("symbol"));
-		}
 
 		// date, symbol and strat are the primary keys and thus need a value to be set or likely
 		// TODO: rework BackTestingDatabase.initTable()
+		for(var strat : Depot.Strategy.values()) {
 
-		for(var s : symbols){
-			for(var strat : Depot.Strategy.values()) {
-
-				stmnt = this.mConnection.prepareStatement(String.format(
-					"INSERT into %s (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-					_TABLE_NAME,
-					DatabaseNames_Backtesting.date,
-					DatabaseNames_Backtesting.symbol,
-					DatabaseNames_Backtesting.strat,
-					DatabaseNames_Backtesting.money,
-					DatabaseNames_Backtesting.buyFlag,
-					DatabaseNames_Backtesting.delta,
-					DatabaseNames_Backtesting.stocks,
-					DatabaseNames_Backtesting.worth,
-					DatabaseNames_Backtesting.close,
-					DatabaseNames_Backtesting.avg
-				));
-				stmnt.setDate(1, Date.valueOf(LocalDate.of(1970, 01, 01)));
-				stmnt.setString(2, s);
-				stmnt.setInt(3, strat.ordinal());
-				stmnt.setFloat(4, 100_000);
-				stmnt.setInt(5, Depot.Point.BuyFlag.UNCHANGED.ordinal());
-				stmnt.setInt(6, 0);
-				stmnt.setInt(7, 0);
-				stmnt.setFloat(8, 0.0f);
-				stmnt.setFloat(9, 0.0f);
-				stmnt.setFloat(10, 0.0f);
-				stmnt.execute();
-			}
+			stmnt = this.mConnection.prepareStatement(String.format(
+				"INSERT into %s (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+				_TABLE_NAME,
+				DatabaseNames_Backtesting.date,
+				DatabaseNames_Backtesting.symbol,
+				DatabaseNames_Backtesting.strat,
+				DatabaseNames_Backtesting.money,
+				DatabaseNames_Backtesting.buyFlag,
+				DatabaseNames_Backtesting.delta,
+				DatabaseNames_Backtesting.stocks,
+				DatabaseNames_Backtesting.worth,
+				DatabaseNames_Backtesting.close,
+				DatabaseNames_Backtesting.avg
+			));
+			stmnt.setDate(1, sta);
+			stmnt.setString(2, symbol);
+			stmnt.setInt(3, strat.ordinal());
+			stmnt.setFloat(4, 100_000);
+			stmnt.setInt(5, Depot.Point.BuyFlag.UNCHANGED.ordinal());
+			stmnt.setInt(6, 0);
+			stmnt.setInt(7, 0);
+			stmnt.setFloat(8, 0.0f);
+			stmnt.setFloat(9, 0.0f);
+			stmnt.setFloat(10, 0.0f);
+			stmnt.execute();
 		}
 	}
 

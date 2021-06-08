@@ -203,6 +203,14 @@ public class StockResults implements CanBeTable {
 		return mDataPoints;
 	}
 
+	public void setNewestDate(LocalDateTime d){
+		this.mNewestDate = d;
+	}
+
+	public void setOldestDate(LocalDateTime d){
+		this.mOldestDate = d;
+	}
+
 	/**
 	 * The short form of the stock.
 	 */

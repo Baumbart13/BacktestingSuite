@@ -93,6 +93,22 @@ public class DamnShit {
 	}
 
 	public void updateDepotValues(Depot dep, StockResults stockRes){
+
+		// create all points new, no matter what
+		// the point with date of stockRes.OldestDay has a unique value with (initMoney/strategyAmount)
+		// because a single dep-object is for 1 stock and all of its strategies
+
+		//TODO: re-implement DamnShit.updateDepotValues
+
+		// first date
+		var firstDepPoint = new Depot.Point(
+			stockRes.getOldestDate().toLocalDate(),
+		);
+		for(var i = 1; i <stockRes.getDataPoints().size(); ++i){
+
+		}
+
+
 		for(int i = 0; i < stockRes.getDataPoints().size(); ++i){
 			var currDepPoint = (i < dep.getData().size()) ? dep.getData().get(i) : null;
 			var currStockPoint = stockRes.getDataPoints().get(i);
@@ -121,7 +137,14 @@ public class DamnShit {
 	}
 
 	public void deleteIrrelevantDates(StockResults res, LocalDate start, LocalDate end){
-		if(start.isEqual(end)) return;
+		if(start.isEqual(end)){
+			for(var i = 0; i < res.getDataPoints().size(); ++i){
+				if(res.getDataPoints().get(i).mDateTime.equals(start.atStartOfDay())){
+					continue;
+				}
+				res.getDataPoints().remove(i--);
+			}
+		}
 		if (start.isAfter(end)) {
 			var temp = LocalDate.parse(end.toString(), DateTimeFormatter.ISO_DATE);
 			end = start;
@@ -135,6 +158,9 @@ public class DamnShit {
 				res.getDataPoints().remove(i--);
 			}
 		}
+
+		res.setNewestDate(end.atStartOfDay());
+		res.setOldestDate(start.atStartOfDay());
 	}
 
 	public void drawChart(List<Depot> depoData, String symbol){
