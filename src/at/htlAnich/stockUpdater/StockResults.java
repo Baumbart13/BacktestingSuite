@@ -1,5 +1,7 @@
 package at.htlAnich.stockUpdater;
 
+import at.htlAnich.backTestingSuite.Depot;
+import at.htlAnich.backTestingSuite.badCode.DamnShit;
 import at.htlAnich.tools.dataTypes.CanSaveCSV;
 import at.htlAnich.tools.database.CanBeTable;
 import jdk.jshell.spi.ExecutionControl;
@@ -165,6 +167,54 @@ public class StockResults implements CanBeTable {
 			}
 		}
 		return;
+	}
+
+	public void sort(){
+		DamnShit.mLogGui.loglnf("Sorting StockResults");
+		sort(0, mDataPoints.size()-1);
+	}
+
+	private void sort(int l, int r){
+		if(l >= r){
+			return;
+		}
+		var m = l+((r-l)/2);
+		sort(l, m);
+		sort(m+1, r);
+		sortM(l, m, r);
+	}
+
+	private void sortM(int l, int m, int r){
+		var n1 = m-l+1;
+		var n2 = r-m;
+
+		var L = new StockDataPoint[n1];
+		var R = new StockDataPoint[n2];
+
+		for(var i = 0; i < n1; ++i){
+			L[i] = mDataPoints.get(l+i);
+		}
+		for(var i = 0; i < n2; ++i){
+			R[i] = mDataPoints.get(m+1+i);
+		}
+
+		int i = 0, j = 0, k = 0;
+		while(i < n1 && j < n2){
+			if(L[i].mDateTime.toLocalDate().isBefore(R[j].mDateTime.toLocalDate()) ||
+				L[i].mDateTime.toLocalDate().isEqual(R[j].mDateTime.toLocalDate())){
+				mDataPoints.set(k, L[i++]);
+			}else{
+				mDataPoints.set(k, R[j++]);
+			}
+			++k;
+		}
+
+		while(i < n1){
+			mDataPoints.set(k++, L[i++]);
+		}
+		while(j < n2){
+			mDataPoints.set(k++, R[j++]);
+		}
 	}
 
 	public LocalDateTime getOldestDate() {

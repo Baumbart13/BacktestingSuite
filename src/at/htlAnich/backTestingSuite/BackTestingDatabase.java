@@ -71,7 +71,7 @@ public class BackTestingDatabase extends StockDatabase {
 		stmnt.execute();
 	}
 
-	public void initTable(String symbol) throws SQLException{
+	public void initTable(String symbol, LocalDate startDate) throws SQLException{
 		// if there is less than or exactly 1 entry,
 		var stmnt = mConnection.prepareStatement(String.format(
 			"SELECT COUNT(*) AS 'my_entries' FROM %s;",
@@ -106,7 +106,7 @@ public class BackTestingDatabase extends StockDatabase {
 				DatabaseNames_Backtesting.close,
 				DatabaseNames_Backtesting.avg
 			));
-			stmnt.setDate(1, sta);
+			stmnt.setDate(1, Date.valueOf(startDate));
 			stmnt.setString(2, symbol);
 			stmnt.setInt(3, strat.ordinal());
 			stmnt.setFloat(4, 100_000);

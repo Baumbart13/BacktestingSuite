@@ -69,9 +69,9 @@ public class BackTesting {
 			if(!DEBUG) {
 				logf("Please enter your starting date [yyyy mm dd]: ");
 				startDate = parseDate(cliInput.nextLine());
-				logf("%nPlease enter your last date [yyyy mm dd]: ");
+				logf("Please enter your last date [yyyy mm dd]: ");
 				endDate = parseDate(cliInput.nextLine());
-				logf("%nPlease enter your total money you want to spend on each stock: ");
+				logf("Please enter your total money you want to spend on each stock: ");
 				totalMoney = cliInput.nextFloat();
 			}else{
 				startDate = LocalDate.of(2021, 5, 6);
@@ -81,7 +81,7 @@ public class BackTesting {
 
 			for(int i = 0; i < requests.size(); ++i) {
 				damn = new DamnShit(requests.poll(), totalMoney, inProd);
-				damn.getValuesAndUpdateDatabase(LocalDate.MIN, LocalDate.now());
+				damn.getValuesAndUpdateDatabase(startDate, endDate);
 				System.out.println("DamnShit ended");
 			}
 

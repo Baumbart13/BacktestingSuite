@@ -1,5 +1,6 @@
 package at.htlAnich.backTestingSuite;
 
+import at.htlAnich.backTestingSuite.badCode.DamnShit;
 import at.htlAnich.stockUpdater.StockResults;
 import at.htlAnich.tools.database.CanBeTable;
 import org.jetbrains.annotations.NotNull;
@@ -141,15 +142,54 @@ public class Depot implements CanBeTable {
 	}
 	
 	public void addPoint(Depot.Point point){
-		var pointDate = point.mDate;
-		var i = 0;
-		
-		var currDay = this.mPoints.get(i).mDate;
-		while(currDay.isBefore(pointDate)){
-			currDay = this.mPoints.get(++i).mDate;
+		mPoints.add(point);
+	}
+
+	public void sort(){
+		DamnShit.mLogGui.loglnf("Sorting Depot");
+		sort(0, mPoints.size()-1);
+	}
+
+	private void sort(int l, int r){
+		if(l >= r){
+			return;
 		}
-		
-		mPoints.add(i, point);
+		var m = l+((r-l)/2);
+		sort(l, m);
+		sort(m+1, r);
+		sortM(l, m, r);
+	}
+
+	private void sortM(int l, int m, int r){
+		var n1 = m-l+1;
+		var n2 = r-m;
+
+		var L = new Point[n1];
+		var R = new Point[n2];
+
+		for(var i = 0; i < n1; ++i){
+			L[i] = mPoints.get(l+i);
+		}
+		for(var i = 0; i < n2; ++i){
+			R[i] = mPoints.get(m+1+i);
+		}
+
+		int i = 0, j = 0, k = 0;
+		while(i < n1 && j < n2){
+			if(L[i].mDate.isBefore(R[j].mDate) || L[i].mDate.isEqual(R[j].mDate)){
+				mPoints.set(k, L[i++]);
+			}else{
+				mPoints.set(k, R[j++]);
+			}
+			++k;
+		}
+
+		while(i < n1){
+			mPoints.set(k++, L[i++]);
+		}
+		while(j < n2){
+			mPoints.set(k++, R[j++]);
+		}
 	}
 	
 	public String getSymbol(){

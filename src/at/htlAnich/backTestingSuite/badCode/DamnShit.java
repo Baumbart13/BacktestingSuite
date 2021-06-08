@@ -10,13 +10,19 @@ import at.htlAnich.stockUpdater.StockResults;
 import at.htlAnich.backTestingSuite.api.ApiParser;
 import at.htlAnich.tools.BaumbartLoggerGUI;
 import at.htlAnich.tools.Environment;
+import org.knowm.xchart.SwingWrapper;
 import org.knowm.xchart.XYChart;
+import org.knowm.xchart.XYChartBuilder;
 import org.knowm.xchart.XYSeries;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
@@ -27,6 +33,7 @@ import static at.htlAnich.tools.BaumbartLogger.loglnf;
 public class DamnShit {
 	protected String mSymbol;
 	protected float mTotalMoney;
+	protected float mMoneyPerStrat;
 	protected boolean mInProduction;
 	protected StockDatabase mStockDb;
 	protected BackTestingDatabase mBacktestDb;
@@ -37,6 +44,7 @@ public class DamnShit {
 		mSymbol = symbol;
 		mTotalMoney = totalMoney;
 		mInProduction = inProduction;
+		mMoneyPerStrat = mTotalMoney / Depot.Strategy.values().length;
 	}
 
 	private static final CredentialLoader.ApiCredentials crapApiCred =
@@ -63,15 +71,12 @@ public class DamnShit {
 		writeToStocksDB(stockData);
 
 		// delete all dates, that are not between (including) start and (excluding) end
-		deleteIrrelevantDates(stockData, start, end);
+		stockData = deleteIrrelevantDates(stockData, start, end);
+		stockData.sort();
 
 		// get depotData(Depot-Object) from database
-		var depotData = readFromDepotDb(stockData);
-
-		// update depotData
-		for(var i = 0; i<depotData.size(); ++i) {
-			updateDepotValues(depotData.get(i), stockData);
-		}
+		//var depotData = readFromDepotDb(stockData);
+		var depotData = createNewDepots(stockData);
 
 		// trade on depotData
 		// ATTENTION:	don't forget splitCorrection, which has to
@@ -80,6 +85,7 @@ public class DamnShit {
 			if(dep.getStrategy().equals(Depot.Strategy.NONE)){
 				continue;
 			}
+			dep.sort();
 			Trader.trade(dep, stockData);
 		}
 
@@ -98,88 +104,93 @@ public class DamnShit {
 		// the point with date of stockRes.OldestDay has a unique value with (initMoney/strategyAmount)
 		// because a single dep-object is for 1 stock and all of its strategies
 
-		//TODO: re-implement DamnShit.updateDepotValues
-
 		// first date
-		var firstDepPoint = new Depot.Point(
-			stockRes.getOldestDate().toLocalDate(),
-		);
-		for(var i = 1; i <stockRes.getDataPoints().size(); ++i){
-
-		}
-
-
-		for(int i = 0; i < stockRes.getDataPoints().size(); ++i){
-			var currDepPoint = (i < dep.getData().size()) ? dep.getData().get(i) : null;
-			var currStockPoint = stockRes.getDataPoints().get(i);
-
-			// definitely easier to read, instead of using the ternary operator instead of setting it first
-			// null, then check for null and then set new DepotPoint
-			if(currDepPoint != null){
-				if(currDepPoint.mDate.isEqual(currStockPoint.mDateTime.toLocalDate())){
-					continue;
-				}
-				currDepPoint.mDate = currStockPoint.mDateTime.toLocalDate();
-			}
-
-
-			currDepPoint = new Depot.Point(
-				currStockPoint.mDateTime.toLocalDate(),
+		if(dep.getData().size() <= 0) {
+			var firstDepPoint = new Depot.Point(
+				stockRes.getOldestDate().toLocalDate(),
 				Depot.Point.BuyFlag.UNCHANGED,
 				0,
-				dep.getData().get(i-1).mStocks,
-				dep.getData().get(i-1).mWorth,
-				currStockPoint.getValue(StockDataPoint.ValueType.avg200),
-				currStockPoint.getValue(StockDataPoint.ValueType.close_adjusted),
-				dep.getData().get(i-1).mMoney);
-			dep.getData().add(currDepPoint);
+				0,
+				0.0f,
+				stockRes.getDataPoints().get(0).getValue(StockDataPoint.ValueType.avg200),
+				stockRes.getDataPoints().get(0).getValue(StockDataPoint.ValueType.close_adjusted),
+				mMoneyPerStrat
+			);
+			dep.addPoint(firstDepPoint);
 		}
+
 	}
 
-	public void deleteIrrelevantDates(StockResults res, LocalDate start, LocalDate end){
+	/**
+	 * All entries, that are not between <code>start</code> and <code>end</code> (both including) will be removed
+	 * and then returned by this method.
+	 * @param res from where the entries will be chosen.
+	 * @param start the first date, that can be inside of the returned object.
+	 * @param end the last date, that can be inside of the returned object.
+	 * @return A <code>StockResults</code>-object only holding the wanted dates (<code>start</code> until
+	 * <code>end</code>, both including).
+	 */
+	public StockResults deleteIrrelevantDates(StockResults res, LocalDate start, LocalDate end){
+		var out = new StockResults(res.getSymbol());
+
+		// only one date ;)
 		if(start.isEqual(end)){
 			for(var i = 0; i < res.getDataPoints().size(); ++i){
 				if(res.getDataPoints().get(i).mDateTime.equals(start.atStartOfDay())){
-					continue;
+					out.addDataPoint(res.getDataPoints().get(i));
+					return out;
 				}
-				res.getDataPoints().remove(i--);
 			}
 		}
+		// if start and end are given the other way round, swap 'em
 		if (start.isAfter(end)) {
 			var temp = LocalDate.parse(end.toString(), DateTimeFormatter.ISO_DATE);
 			end = start;
 			start = temp;
 		}
 
+
 		for(var i = 0; i < res.getDataPoints().size(); ++i){
 			var date = res.getDataPoints().get(i).mDateTime.toLocalDate();
-			if((date.isBefore(start) && date.isBefore(end)) ||
-				(date.isAfter(start) && date.isAfter(end))){
-				res.getDataPoints().remove(i--);
+			if(date.isAfter(start) && date.isBefore(end)){
+				out.addDataPoint(res.getDataPoints().get(i));
 			}
 		}
 
-		res.setNewestDate(end.atStartOfDay());
-		res.setOldestDate(start.atStartOfDay());
+		out.setNewestDate(out.getDataPoints().get(0).mDateTime);
+		out.setOldestDate(out.getDataPoints().get(out.getDataPoints().size()-1).mDateTime);
+		return out;
 	}
 
 	public void drawChart(List<Depot> depoData, String symbol){
-		XYChart chart = new XYChart(Environment.getDesktopWidth_Multiple(), Environment.getDesktopHeight_Multiple());
-		chart.setTitle("Stock strategies");
+		XYChart chart = new XYChartBuilder().width(Environment.getDesktopWidth_Multiple())
+			.height(Environment.getDesktopHeight_Multiple()).title(symbol)
+			.xAxisTitle("Dates").yAxisTitle("Money").build();
+		chart.getStyler().setDatePattern("yyyy-mm-dd");
+		chart.getStyler().setDecimalPattern("#0.00");
+		chart.getStyler().setLocale(Locale.getDefault());
 
-		XYSeries series;
-		var xAxis = new LinkedList<LinkedList<LocalDate>>();
-		var yAxis = new LinkedList<LinkedList<Float>>();
+		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
-		int currStrat = 0;
-		for(var depo : depoData){
-			xAxis.add(new LinkedList<>());
-			yAxis.add(new LinkedList<>());
+		for(var depot : depoData){
+			var money = new LinkedList<Float>();
+			var dates = new LinkedList<Date>();
+			for(var p : depot.getData()){
+				// add money - yAxis-values
+				money.add(p.mMoney);
 
-			for(var i = 0; i < depo.getData().size(); ++i){
-				// TODO: continue implementing xChart
+				// add dates - xAxis-Values
+				Date date = null;
+				try {
+					date = dateFormat.parse(p.mDate.format(DateTimeFormatter.ISO_DATE));
+				} catch (ParseException e) {
+					e.printStackTrace();
+				}
+				dates.add(date);
 			}
+			chart.addSeries(depot.getStrategy().toString(), dates, money);
 		}
+		new SwingWrapper<XYChart>(chart).displayChart();
 	}
 
 	public void writeToDepotDb(List<Depot> depoData, String symbol){
@@ -190,9 +201,9 @@ public class DamnShit {
 			mBacktestDb.connect();
 			mBacktestDb.createDatabase();
 			mBacktestDb.createTable(BackTestingDatabase._TABLE_NAME);
-			for(var dep : depoData){
+			/*for(var dep : depoData){
 				mBacktestDb.updateDepots(dep, symbol);
-			}
+			}*/
 			mBacktestDb.disconnect();
 
 		} catch (SQLException e) {
@@ -200,6 +211,33 @@ public class DamnShit {
 		}
 
 		return;
+	}
+
+	public List<Depot> createNewDepots(StockResults res){
+		var deps = new LinkedList<Depot>();
+		var firstStockDate = res.getDataPoints().get(0);
+
+		for(var strat : Depot.Strategy.values()){
+			if(strat.equals(Depot.Strategy.NONE)){
+				continue;
+			}
+			deps.add(new Depot(
+				mSymbol,
+				strat,
+				new Depot.Point(
+					firstStockDate.mDateTime.toLocalDate(),
+					Depot.Point.BuyFlag.UNCHANGED,
+					0,
+					0,
+					0.0f,
+					firstStockDate.getValue(StockDataPoint.ValueType.avg200),
+					// use close, so splitCorrection can be done
+					firstStockDate.getValue(StockDataPoint.ValueType.close_adjusted),
+					mMoneyPerStrat
+				)
+			));
+		}
+		return deps;
 	}
 
 	/**
@@ -219,7 +257,7 @@ public class DamnShit {
 			mBacktestDb.createDatabase();
 			mLogGui.loglnf("creating table if necessary");
 			mBacktestDb.createTable(res.getTableName());
-			mBacktestDb.initTable(res.getSymbol());
+			mBacktestDb.initTable(res.getSymbol(), res.getOldestDate().toLocalDate());
 			mLogGui.loglnf("reading values from db");
 			for(var strat : Depot.Strategy.values()) {
 				try {
