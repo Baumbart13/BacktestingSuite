@@ -13,7 +13,7 @@ import at.htlAnich.tools.Environment;
 import org.knowm.xchart.SwingWrapper;
 import org.knowm.xchart.XYChart;
 import org.knowm.xchart.XYChartBuilder;
-import org.knowm.xchart.XYSeries;
+import org.knowm.xchart.style.markers.SeriesMarkers;
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -28,12 +28,11 @@ import java.util.List;
 import java.util.Locale;
 
 import static at.htlAnich.tools.BaumbartLogger.errlnf;
-import static at.htlAnich.tools.BaumbartLogger.loglnf;
 
 public class DamnShit {
 	protected String mSymbol;
 	protected float mTotalMoney;
-	protected float mMoneyPerStrat;
+	protected float mMoneyPerSymbol;
 	protected boolean mInProduction;
 	protected StockDatabase mStockDb;
 	protected BackTestingDatabase mBacktestDb;
@@ -44,7 +43,7 @@ public class DamnShit {
 		mSymbol = symbol;
 		mTotalMoney = totalMoney;
 		mInProduction = inProduction;
-		mMoneyPerStrat = mTotalMoney / Depot.Strategy.values().length;
+		mMoneyPerSymbol = mTotalMoney;
 	}
 
 	private static final CredentialLoader.ApiCredentials crapApiCred =
@@ -114,7 +113,7 @@ public class DamnShit {
 				0.0f,
 				stockRes.getDataPoints().get(0).getValue(StockDataPoint.ValueType.avg200),
 				stockRes.getDataPoints().get(0).getValue(StockDataPoint.ValueType.close_adjusted),
-				mMoneyPerStrat
+				mMoneyPerSymbol
 			);
 			dep.addPoint(firstDepPoint);
 		}
@@ -173,6 +172,9 @@ public class DamnShit {
 		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
 		for(var depot : depoData){
+			if(depot.getStrategy().equals(Depot.Strategy.NONE)){
+				continue;
+			}
 			var money = new LinkedList<Float>();
 			var dates = new LinkedList<Date>();
 			for(var p : depot.getData()){
@@ -188,7 +190,7 @@ public class DamnShit {
 				}
 				dates.add(date);
 			}
-			chart.addSeries(depot.getStrategy().toString(), dates, money);
+			chart.addSeries(depot.getStrategy().toString(), dates, money).setMarker(SeriesMarkers.NONE);
 		}
 		new SwingWrapper<XYChart>(chart).displayChart();
 	}
@@ -233,7 +235,7 @@ public class DamnShit {
 					firstStockDate.getValue(StockDataPoint.ValueType.avg200),
 					// use close, so splitCorrection can be done
 					firstStockDate.getValue(StockDataPoint.ValueType.close_adjusted),
-					mMoneyPerStrat
+					mMoneyPerSymbol
 				)
 			));
 		}

@@ -74,15 +74,18 @@ public class BackTesting {
 				logf("Please enter your total money you want to spend on each stock: ");
 				totalMoney = cliInput.nextFloat();
 			}else{
-				startDate = LocalDate.of(2021, 5, 6);
+				startDate = LocalDate.of(2020, 5, 6);
 				endDate = LocalDate.of(2021, 6, 5);
 				totalMoney = 100000.0f;
 			}
 
-			for(int i = 0; i < requests.size(); ++i) {
-				damn = new DamnShit(requests.poll(), totalMoney, inProd);
+			final var noStocks = requests.size();
+			while(requests.size() > 0){
+				var symbol = requests.poll();
+				System.out.printf("Current stock: %s%n", symbol);
+				damn = new DamnShit(symbol, totalMoney/noStocks, inProd);
 				damn.getValuesAndUpdateDatabase(startDate, endDate);
-				System.out.println("DamnShit ended");
+				System.out.printf("%s ended for %s%n%n", DamnShit.class.toString(), symbol);
 			}
 
 			System.out.println("Waiting to enter something to exit program");
@@ -127,7 +130,7 @@ public class BackTesting {
 				if(line.equals("")){
 					continue;
 				}
-				requests.add(line);
+				requests.add(line.toUpperCase());
 			}
 		}catch(IOException e){
 			e.printStackTrace();
