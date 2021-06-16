@@ -12,8 +12,7 @@ import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.ArrayList;
 
 /**
  * This class is the interface between the API and Database. It supports <code>StockDataPoint</code> and
@@ -26,7 +25,7 @@ public class StockResults implements CanBeTable {
 	private HashMap<StockDataPoint.ValueType, Float> mUpperBounds;
 	private LocalDateTime mOldestDate;
 	private LocalDateTime mNewestDate;
-	private List<StockDataPoint> mDataPoints;
+	private ArrayList<StockDataPoint> mDataPoints;
 	private String mSymbol;
 	private String mName;
 
@@ -90,7 +89,8 @@ public class StockResults implements CanBeTable {
 		this.mUpperBounds = new HashMap<StockDataPoint.ValueType, Float>(other.mUpperBounds);
 		this.mOldestDate = LocalDateTime.of(other.mOldestDate.toLocalDate(), other.mOldestDate.toLocalTime());
 		this.mNewestDate = LocalDateTime.of(other.mNewestDate.toLocalDate(), other.mNewestDate.toLocalTime());
-		this.mDataPoints = other.mDataPoints.subList(0, other.mDataPoints.size());
+		this.mDataPoints = new ArrayList<>(other.mDataPoints.size());
+		this.mDataPoints.addAll(other.mDataPoints);
 		this.mSymbol = other.mSymbol.toString();
 		this.mName = other.mName;
 	}
@@ -100,7 +100,7 @@ public class StockResults implements CanBeTable {
 		this.mName = name;
 		this.mLowerBounds = new HashMap<>();
 		this.mUpperBounds = new HashMap<>();
-		this.mDataPoints = new LinkedList<>();
+		this.mDataPoints = new ArrayList<>();
 		this.mOldestDate = LocalDateTime.MAX;
 		this.mNewestDate = LocalDateTime.MIN;
 
@@ -249,7 +249,7 @@ public class StockResults implements CanBeTable {
 	/**
 	 * @return the DataPoints of this object.
 	 */
-	public List<StockDataPoint> getDataPoints(){
+	public ArrayList<StockDataPoint> getDataPoints(){
 		return mDataPoints;
 	}
 

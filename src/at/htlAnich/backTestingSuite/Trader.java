@@ -4,15 +4,13 @@ import at.htlAnich.backTestingSuite.badCode.DamnShit;
 import at.htlAnich.stockUpdater.StockDataPoint;
 import at.htlAnich.stockUpdater.StockResults;
 
-import java.util.List;
+import java.util.ArrayList;
 
 import static at.htlAnich.tools.BaumbartLogger.logf;
 import static at.htlAnich.tools.BaumbartLogger.loglnf;
 
 public final class Trader {
 	private Trader(){ }
-
-	public static final int BUY_AMOUNT = 10;
 
 	public static void createNewDepotPoint(Depot dep, Depot.Point yesterday, StockDataPoint today){
 		var newDepPoint = new Depot.Point(
@@ -80,36 +78,38 @@ public final class Trader {
 			int todayAvg = (int)(todaysStock.getValue(StockDataPoint.ValueType.avg200) * 100.0f);
 
 			int maxStocksCanBuy = (int)(todaysDepot.mMoney / todaysDepot.mClose);
-			boolean canBuy = maxStocksCanBuy >= BUY_AMOUNT;
-			boolean canSell = todaysDepot.mStocks >= BUY_AMOUNT;
+			boolean canBuy = maxStocksCanBuy >= 1;
+			boolean canSell = todaysDepot.mStocks >= 1;
 
 			if(!canBuy && !canSell){
 				DamnShit.mLogGui.loglnf("Cannot buy/sell on %s", todaysStock.mDateTime.toLocalDate().toString());
 			}
 
-
+			final var BUY_AMOUNT = maxStocksCanBuy;
 			// buy BUY_AMOUNT if today.close>today.avg200
 			if(canBuy && todayClose > todayAvg){
 				todaysDepot.mBuyAmount += BUY_AMOUNT;
 				todaysDepot.mFlag = Depot.Point.BuyFlag.BUY;
-				todaysDepot.mMoney -= BUY_AMOUNT*todayClose;
+				todaysDepot.mMoney -= BUY_AMOUNT*todaysDepot.mClose;
 			}
 			// sell BUY_AMOUNT if today.close<today.avg200
 			else if(canSell && todayAvg < todayClose){
 				todaysDepot.mBuyAmount -= BUY_AMOUNT;
 				todaysDepot.mFlag = Depot.Point.BuyFlag.SELL;
-				todaysDepot.mMoney += BUY_AMOUNT*todayClose;
+				todaysDepot.mMoney += BUY_AMOUNT*todaysDepot.mClose;
 			}
 			// do nothing if today.close==today.avg200
 			else{
-				DamnShit.mLogGui.loglnf("Not traded today. Today's date is: %s", todaysStock.mDateTime.toLocalDate().toString());
+				var date = todaysStock.mDateTime.toLocalDate();
+				DamnShit.mLogGui.loglnf("Not traded today. Today's date is: %d %s %d.",
+					date.getYear(), date.getMonth(), date.getDayOfMonth());
 
 				// just to be sure
 				todaysDepot.mBuyAmount += 0;
 				todaysDepot.mFlag = Depot.Point.BuyFlag.UNCHANGED;
 				todaysDepot.mMoney -= 0;
 			}
-			todaysDepot.mWorth = todayClose*todaysDepot.mStocks;
+			todaysDepot.mWorth = todaysDepot.mClose*todaysDepot.mStocks;
 		}
 	}
 	public static void trade_avg200_3Percent(Depot dep, StockResults stockRes){
@@ -139,25 +139,25 @@ public final class Trader {
 			int todayAvg = (int)(todaysStock.getValue(StockDataPoint.ValueType.avg200) * 100.0f);
 
 			int maxStocksCanBuy = (int)(todaysDepot.mMoney / todaysDepot.mClose);
-			boolean canBuy = maxStocksCanBuy >= BUY_AMOUNT;
-			boolean canSell = todaysDepot.mStocks >= BUY_AMOUNT;
+			boolean canBuy = maxStocksCanBuy >= 1;
+			boolean canSell = todaysDepot.mStocks >= 1;
 
 			if(!canBuy && !canSell){
 				DamnShit.mLogGui.loglnf("Cannot buy/sell on %s", todaysStock.mDateTime.toLocalDate().toString());
 			}
 
-
+			final var BUY_AMOUNT = maxStocksCanBuy;
 			// buy BUY_AMOUNT if today.close>today.avg200
 			if(canBuy && todayClose > todayAvg*1.03){
 				todaysDepot.mBuyAmount += BUY_AMOUNT;
 				todaysDepot.mFlag = Depot.Point.BuyFlag.BUY;
-				todaysDepot.mMoney -= BUY_AMOUNT*todayClose;
+				todaysDepot.mMoney -= BUY_AMOUNT*todaysDepot.mClose;
 			}
 			// sell BUY_AMOUNT if today.close<today.avg200
 			else if(canSell && todayAvg < todayClose*1.03){
 				todaysDepot.mBuyAmount -= BUY_AMOUNT;
 				todaysDepot.mFlag = Depot.Point.BuyFlag.SELL;
-				todaysDepot.mMoney += BUY_AMOUNT*todayClose;
+				todaysDepot.mMoney += BUY_AMOUNT*todaysDepot.mClose;
 			}
 			// do nothing if today.close==today.avg200
 			else{
@@ -198,25 +198,25 @@ public final class Trader {
 			int todayAvg = (int)(todaysStock.getValue(StockDataPoint.ValueType.avg200) * 100.0f);
 
 			int maxStocksCanBuy = (int)(todaysDepot.mMoney / todaysDepot.mClose);
-			boolean canBuy = maxStocksCanBuy >= BUY_AMOUNT;
-			boolean canSell = todaysDepot.mStocks >= BUY_AMOUNT;
+			boolean canBuy = maxStocksCanBuy >= 1;
+			boolean canSell = todaysDepot.mStocks >= 1;
 
 			if(!canBuy && !canSell){
 				DamnShit.mLogGui.loglnf("Cannot buy/sell on %s", todaysStock.mDateTime.toLocalDate().toString());
 			}
 
-
+			final var BUY_AMOUNT = maxStocksCanBuy;
 			// buy BUY_AMOUNT if today.close<today.avg200
 			if(canBuy && todayClose < todayAvg){
 				todaysDepot.mBuyAmount += BUY_AMOUNT;
 				todaysDepot.mFlag = Depot.Point.BuyFlag.BUY;
-				todaysDepot.mMoney -= BUY_AMOUNT*todayClose;
+				todaysDepot.mMoney -= BUY_AMOUNT*todaysDepot.mClose;
 			}
 			// sell BUY_AMOUNT if today.close>today.avg200
 			else if(canSell && todayAvg > todayClose){
 				todaysDepot.mBuyAmount -= BUY_AMOUNT;
 				todaysDepot.mFlag = Depot.Point.BuyFlag.SELL;
-				todaysDepot.mMoney += BUY_AMOUNT*todayClose;
+				todaysDepot.mMoney += BUY_AMOUNT*todaysDepot.mClose;
 			}
 			// do nothing if today.close==today.avg200
 			else{

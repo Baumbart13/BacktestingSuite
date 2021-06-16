@@ -7,7 +7,10 @@ import java.io.IOException;
 import java.nio.Buffer;
 import java.sql.SQLException;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.List;
+import java.util.Queue;
+import java.util.Scanner;
+import java.util.Arrays;
 
 import at.htlAnich.backTestingSuite.badCode.DamnShit;
 import at.htlAnich.tools.BaumbartLogger;
@@ -16,7 +19,7 @@ import static at.htlAnich.tools.BaumbartLogger.*;
 
 
 public class BackTesting {
-	public static Queue<String> requests = new LinkedList<>();
+	public static Queue<String> requests = new java.util.LinkedList<>();
 	public static Scanner cliInput = new Scanner(System.in);
 	public static at.htlAnich.backTestingSuite.badCode.DamnShit damn;
 	public static GUI inputScreen;

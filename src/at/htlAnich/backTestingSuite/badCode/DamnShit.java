@@ -1,5 +1,6 @@
 package at.htlAnich.backTestingSuite.badCode;
 
+import at.htlAnich.backTestingSuite.BackTesting;
 import at.htlAnich.backTestingSuite.BackTestingDatabase;
 import at.htlAnich.backTestingSuite.Depot;
 import at.htlAnich.backTestingSuite.Trader;
@@ -16,6 +17,7 @@ import org.knowm.xchart.XYChartBuilder;
 import org.knowm.xchart.style.markers.SeriesMarkers;
 
 import java.io.IOException;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -23,8 +25,7 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.ArrayList;
 import java.util.Locale;
 
 import static at.htlAnich.tools.BaumbartLogger.errlnf;
@@ -70,8 +71,8 @@ public class DamnShit {
 		writeToStocksDB(stockData);
 
 		// delete all dates, that are not between (including) start and (excluding) end
-		stockData = deleteIrrelevantDates(stockData, start, end);
-		stockData.sort();
+		stockData = readFromStockDb(stockData.getSymbol(), start, end);
+		//stockData.sort();
 
 		// get depotData(Depot-Object) from database
 		//var depotData = readFromDepotDb(stockData);
@@ -95,6 +96,26 @@ public class DamnShit {
 		drawChart(depotData, stockData.getSymbol());
 
 		return depotData.get(0);
+	}
+
+	public StockResults readFromStockDb(String symbol, LocalDate start, LocalDate end){
+		mStockDb = new StockDatabase(crapDbCred.host(), crapDbCred.user(), crapDbCred.password(), crapDbCred.database());
+		var resOut = new StockResults("ERROR");
+		try{
+			mLogGui.loglnf("Connecting to stockresults-db");
+			mStockDb.connect();
+			mStockDb.createDatabase();
+			mStockDb.createTable(resOut.getTableName());
+			resOut = mStockDb.getValues(symbol, start, end);
+
+			mStockDb.disconnect();
+		}catch (SQLException e){
+			e.printStackTrace();
+		}finally{
+			mStockDb = null;
+		}
+
+		return resOut;
 	}
 
 	public void updateDepotValues(Depot dep, StockResults stockRes){
@@ -161,7 +182,7 @@ public class DamnShit {
 		return out;
 	}
 
-	public void drawChart(List<Depot> depoData, String symbol){
+	public void drawChart(ArrayList<Depot> depoData, String symbol){
 		XYChart chart = new XYChartBuilder().width(Environment.getDesktopWidth_Multiple())
 			.height(Environment.getDesktopHeight_Multiple()).title(symbol)
 			.xAxisTitle("Dates").yAxisTitle("Money").build();
@@ -175,8 +196,8 @@ public class DamnShit {
 			if(depot.getStrategy().equals(Depot.Strategy.NONE)){
 				continue;
 			}
-			var money = new LinkedList<Float>();
-			var dates = new LinkedList<Date>();
+			var money = new ArrayList<Float>();
+			var dates = new ArrayList<Date>();
 			for(var p : depot.getData()){
 				// add money - yAxis-values
 				money.add(p.mMoney);
@@ -195,8 +216,8 @@ public class DamnShit {
 		new SwingWrapper<XYChart>(chart).displayChart();
 	}
 
-	public void writeToDepotDb(List<Depot> depoData, String symbol){
-		mBacktestDb = new BackTestingDatabase("localhost:3306", "root", "DuArschloch4", "baumbartstocks");
+	public void writeToDepotDb(ArrayList<Depot> depoData, String symbol){
+		mBacktestDb = new BackTestingDatabase(crapDbCred.host(), crapDbCred.user(), crapDbCred.password(), crapDbCred.database());
 
 		try{
 			mLogGui.loglnf("Connecting to backtest-db");
@@ -215,8 +236,8 @@ public class DamnShit {
 		return;
 	}
 
-	public List<Depot> createNewDepots(StockResults res){
-		var deps = new LinkedList<Depot>();
+	public ArrayList<Depot> createNewDepots(StockResults res){
+		var deps = new ArrayList<Depot>();
 		var firstStockDate = res.getDataPoints().get(0);
 
 		for(var strat : Depot.Strategy.values()){
@@ -247,8 +268,8 @@ public class DamnShit {
 	 * @param res a reference to load the same stock as previously used in the program.
 	 * @return
 	 */
-	public List<Depot> readFromDepotDb(StockResults res){
-		var deps = new LinkedList<Depot>();
+	public ArrayList<Depot> readFromDepotDb(StockResults res){
+		var deps = new ArrayList<Depot>();
 
 		mBacktestDb = new BackTestingDatabase("localhost", "root", "DuArschloch4", "baumbartstocks");
 

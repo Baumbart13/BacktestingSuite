@@ -8,8 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.ArrayList;
 
 import static at.htlAnich.tools.BaumbartLogger.loglnf;
 
@@ -17,7 +16,7 @@ import static at.htlAnich.tools.BaumbartLogger.loglnf;
  * A Collection of Depot-Rows. A different depot means a different strategy.
  */
 public class Depot implements CanBeTable {
-	protected List<Point> mPoints = null;
+	protected ArrayList<Point> mPoints = null;
 	protected Strategy mStrategy = null;
 	protected String mSymbol = null;
 
@@ -111,7 +110,7 @@ public class Depot implements CanBeTable {
 	}
 
 	public Depot(String symbol, Strategy strat, Point... points){
-		var sortedTemp = new LinkedList<Point>();
+		var sortedTemp = new ArrayList<Point>();
 
 		for(var p : points){
 			sortedTemp.add(p);
@@ -128,7 +127,7 @@ public class Depot implements CanBeTable {
 	 * Default-constructor just initializes the points and the strategy, to preserve a null-pointer-exception.
 	 */
 	public Depot(){
-		mPoints = new LinkedList<>();
+		mPoints = new ArrayList<>();
 		mStrategy = Strategy.NONE;
 		mSymbol = "";
 	}
@@ -137,7 +136,7 @@ public class Depot implements CanBeTable {
 	 * Returns all <code>DepotPoint</code>s.
 	 * @return the same collection of <code>DepotPoint</code>s as in this object.
 	 */
-	public List<Point> getData(){
+	public ArrayList<Point> getData(){
 		return mPoints;
 	}
 	
@@ -174,7 +173,7 @@ public class Depot implements CanBeTable {
 			R[i] = mPoints.get(m+1+i);
 		}
 
-		int i = 0, j = 0, k = 0;
+		int i = 0, j = 0, k = l;
 		while(i < n1 && j < n2){
 			if(L[i].mDate.isBefore(R[j].mDate) || L[i].mDate.isEqual(R[j].mDate)){
 				mPoints.set(k, L[i++]);

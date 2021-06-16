@@ -1,5 +1,7 @@
 package at.htlAnich.stockUpdater;
 
+import at.htlAnich.backTestingSuite.BackTestingDatabase;
+import at.htlAnich.backTestingSuite.Depot;
 import at.htlAnich.tools.database.CanBeTable;
 import at.htlAnich.tools.database.Database;
 import at.htlAnich.tools.database.MySQL;
@@ -12,8 +14,7 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.ArrayList;
 
 import static at.htlAnich.tools.BaumbartLogger.*;
 
@@ -21,7 +22,7 @@ import static at.htlAnich.tools.BaumbartLogger.*;
  * @author Baumbart13
  */
 public class StockDatabase extends MySQL implements CanBeTable {
-	public static final String	_TABLE_NAME__DATA	= "stock_data";
+	public static final String _TABLE_NAME__DATA = "stock_data";
 
 	public StockDatabase(){
 		this("", "", "", "");
@@ -49,6 +50,71 @@ public class StockDatabase extends MySQL implements CanBeTable {
 
 	public void createDatabase() throws SQLException{
 		this.createDatabase(this.mDatabase);
+	}
+
+	public StockResults getValues(String symbol) throws SQLException{
+		return getValues(symbol, LocalDate.MIN, LocalDate.now());
+	}
+
+	public StockResults getValues(String symbol, LocalDate start, LocalDate end) throws SQLException{
+		var stmnt = this.mConnection.prepareStatement(String.format(
+			"select %s, %s, %s, %s, %s, %s, %s, %s, %s from %s where " +
+				"%s=? and ?<%s AND ?>%s order by %s asc",
+			StockResults.DatabaseNames_Data.data_datetime,
+			StockResults.DatabaseNames_Data.data_open,
+			StockResults.DatabaseNames_Data.data_close,
+			StockResults.DatabaseNames_Data.data_high,
+			StockResults.DatabaseNames_Data.data_low,
+			StockResults.DatabaseNames_Data.data_volume,
+			StockResults.DatabaseNames_Data.data_splitCoefficient,
+			StockResults.DatabaseNames_Data.data_close_adjusted,
+			StockResults.DatabaseNames_Data.data_avg200,
+			// from
+			_TABLE_NAME__DATA,
+			// where
+			StockResults.DatabaseNames_Data.data_symbol,
+			// and
+			StockResults.DatabaseNames_Data.data_datetime,
+			// AND
+			StockResults.DatabaseNames_Data.data_datetime,
+			// order by
+			StockResults.DatabaseNames_Data.data_datetime
+		));
+
+		stmnt.setString(1, symbol);
+		stmnt.setDate(2, Date.valueOf(start));
+		stmnt.setDate(3, Date.valueOf(end));
+
+		var rs = stmnt.executeQuery();
+
+		// Process db-stuff into StockResults
+
+		var stockRes = new StockResults(symbol);
+		while(rs.next()){
+			LocalDateTime datetime = rs.getDate(StockResults.DatabaseNames_Data.data_datetime.toString()).toLocalDate().atStartOfDay();
+			float open = rs.getFloat(StockResults.DatabaseNames_Data.data_open.toString());
+			float close = rs.getFloat(StockResults.DatabaseNames_Data.data_close.toString());
+			float high = rs.getFloat(StockResults.DatabaseNames_Data.data_high.toString());
+			float low = rs.getFloat(StockResults.DatabaseNames_Data.data_low.toString());
+			float volume = rs.getFloat(StockResults.DatabaseNames_Data.data_volume.toString());
+			float splitCoefficient = rs.getFloat(StockResults.DatabaseNames_Data.data_splitCoefficient.toString());
+			float closeAdjusted = rs.getFloat(StockResults.DatabaseNames_Data.data_close_adjusted.toString());
+			float avg200 = rs.getFloat(StockResults.DatabaseNames_Data.data_avg200.toString());
+
+			var point = new StockDataPoint(datetime);
+			point.setValue(StockDataPoint.ValueType.open, open);
+			point.setValue(StockDataPoint.ValueType.close, close);
+			point.setValue(StockDataPoint.ValueType.high, high);
+			point.setValue(StockDataPoint.ValueType.low, low);
+			point.setValue(StockDataPoint.ValueType.volume, volume);
+			point.setValue(StockDataPoint.ValueType.splitCoefficient, splitCoefficient);
+			point.setValue(StockDataPoint.ValueType.close_adjusted, closeAdjusted);
+			point.setValue(StockDataPoint.ValueType.avg200, avg200);
+
+			stockRes.addDataPoint(point);
+		}
+
+		return stockRes;
 	}
 
 	public void createTable(String tableName) throws SQLException{
@@ -227,7 +293,7 @@ public class StockDatabase extends MySQL implements CanBeTable {
 	 * @return an array with every average-column existing on the database.
 	 */
 	public Long[] getAvgsOnDatabase(){
-		var out = new LinkedList<Long>();
+		var out = new ArrayList<Long>();
 		final var sql = "SHOW COLUMNS FROM " + _TABLE_NAME__DATA + ";";
 
 		try{
