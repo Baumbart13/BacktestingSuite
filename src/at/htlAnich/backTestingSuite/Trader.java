@@ -56,14 +56,10 @@ public final class Trader {
 		// startDate and endDate (both including)
 		// if dep does not have a day for the corresponding date, create a new Depot.Point
 		// at this date and then see, whether a trade shall happen or not
-		for(var i = 0; i < stockRes.getDataPoints().size(); ++i){
+		for(var i = 1; i < stockRes.getDataPoints().size(); ++i){
 			// for easier access
 			var todaysStock = stockRes.getDataPoints().get(i);
-			var yesterdaysDepot = dep.getData().get(
-				// if i==0, we would be fucked up, but we can use a little trick
-				// by just using the first entry as yesterday, where we have no yesterday
-				(i==0)?i:i-1 // i love the if's we can make via the ternary operator
-			);
+			var yesterdaysDepot = dep.getData().get(i);
 
 			// create new depotPoint if there is none
 			if(i >= dep.getData().size()){

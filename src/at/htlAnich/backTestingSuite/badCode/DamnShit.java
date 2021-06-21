@@ -28,7 +28,7 @@ import java.util.Date;
 import java.util.ArrayList;
 import java.util.Locale;
 
-import static at.htlAnich.tools.BaumbartLogger.errlnf;
+import static at.htlAnich.tools.BaumbartLogger.*;
 
 public class DamnShit {
 	protected String mSymbol;
@@ -87,7 +87,18 @@ public class DamnShit {
 			}
 			dep.sort();
 			Trader.trade(dep, stockData);
+			loglnf("Current Strat: %s", dep.getStrategy());
+			if(BackTesting.DEBUG()){
+				if(!dep.getStrategy().equals(Depot.Strategy.NONE)) {
+					for (var i = 0; i < dep.getData().size(); ++i) {
+						logf(dep.getData().get(i).mDate.toString());
+						loglnf(" money: %.2f, stocks: %d", dep.getData().get(i).mMoney, dep.getData().get(i).mStocks);
+					}
+					//System.exit(0);
+				}
+			}
 		}
+		System.exit(0);
 
 		// write new values to backtesting_depot
 		writeToDepotDb(depotData, stockData.getSymbol());
