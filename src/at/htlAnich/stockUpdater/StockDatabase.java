@@ -52,6 +52,61 @@ public class StockDatabase extends MySQL implements CanBeTable {
 		this.createDatabase(this.mDatabase);
 	}
 
+	public void calcAvg(StockResults res) throws SQLException{
+		for(var i = 0; i < res.getDataPoints().size(); ++i) {
+			var currDay = res.getDataPoints().get(i).mDateTime.toLocalDate();
+			var symbol = res.getSymbol();
+
+			// first get the average
+			var avg200 = getAvg200(symbol, currDay);
+			// then update it to database
+			setAvg200(symbol, currDay, avg200);
+			// update the stockresults
+			res.getDataPoints().get(i).setValue(StockDataPoint.ValueType.avg200, avg200);
+		}
+	}
+
+	public void setAvg200(String symbol, LocalDate date, float avg200) throws SQLException{
+		var stmnt = this.mConnection.prepareStatement(String.format(
+			"insert into %s (%s, %s, %s) VALUES (?, ?, ?) on duplicate key %s=?;",
+			_TABLE_NAME__DATA,
+			symbol,
+			StockResults.DatabaseNames_Data.data_avg200,
+			StockResults.DatabaseNames_Data.data_datetime,
+
+			StockResults.DatabaseNames_Data.data_avg200
+		));
+
+		stmnt.setString(1, symbol);
+		stmnt.setFloat(2, avg200);
+		stmnt.setDate(3, java.sql.Date.valueOf(date));
+		stmnt.setFloat(4, avg200);
+
+		stmnt.executeUpdate();
+	}
+
+	public float getAvg200(String symbol, LocalDate upper) throws SQLException{
+		var out = 0.0f;
+		var stmnt = this.mConnection.prepareStatement(String.format(
+			"SELECT AVG(%s) AS 'average' FROM %s WHERE %s=? AND ?<%s AND ?>%s;",
+			StockResults.DatabaseNames_Data.data_avg200,
+			_TABLE_NAME__DATA,
+			StockResults.DatabaseNames_Data.data_symbol,
+			StockResults.DatabaseNames_Data.data_datetime,
+			StockResults.DatabaseNames_Data.data_datetime
+		));
+		stmnt.setString(1, symbol);
+		stmnt.setDate(2, java.sql.Date.valueOf(upper.minusDays(200)));
+		stmnt.setDate(3, java.sql.Date.valueOf(upper));
+
+		var rs = stmnt.executeQuery();
+		while(rs.next()){
+			out = rs.getFloat("average");
+		}
+
+		return out;
+	}
+
 	public StockResults getValues(String symbol) throws SQLException{
 		return getValues(symbol, LocalDate.MIN, LocalDate.now());
 	}

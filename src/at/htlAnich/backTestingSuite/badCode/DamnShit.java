@@ -118,6 +118,7 @@ public class DamnShit {
 			mStockDb.createDatabase();
 			mStockDb.createTable(resOut.getTableName());
 			resOut = mStockDb.getValues(symbol, start, end);
+			mStockDb.calcAvg(resOut);
 
 			mStockDb.disconnect();
 		}catch (SQLException e){
@@ -328,7 +329,7 @@ public class DamnShit {
 		}
 
 		res.splitCorrection();
-		res.calcAverage();
+		//res.calcAverage();
 
 		return res;
 	}
