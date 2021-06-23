@@ -52,6 +52,42 @@ public class DamnShit {
 	private static final CredentialLoader.DatabaseCredentials crapDbCred =
 		new CredentialLoader.DatabaseCredentials("localhost","root","DuArschloch4","baumbartstocks");
 
+	public Depot.Point getFirstDepotEntry(Depot.Strategy strat){
+		var point = new Depot.Point();
+		if(mBacktestDb == null){
+			errlnf("Who eliminated the database?");
+			return point;
+		}
+
+		try{
+			mBacktestDb.connect();
+			point = mBacktestDb.getOldestDepotPoint(strat, mSymbol);
+			mBacktestDb.disconnect();
+		}catch (SQLException e){
+			e.printStackTrace();
+		}
+
+		return point;
+	}
+
+	public Depot.Point getLastDepotEntry(Depot.Strategy strat){
+		var point = new Depot.Point();
+		if(mBacktestDb == null){
+			errlnf("Who eliminated the database?");
+			return point;
+		}
+
+		try{
+			mBacktestDb.connect();
+			point = mBacktestDb.getNewestDepotPoint(strat, mSymbol);
+			mBacktestDb.disconnect();
+		}catch (SQLException e){
+			e.printStackTrace();
+		}
+
+		return point;
+	}
+
 	/**
 	 * @return the Depot with the traded stocks
 	 */
@@ -67,7 +103,7 @@ public class DamnShit {
 		updateStockValues(stockData);
 
 		mLogGui.loglnf("Writing stocks to Stock-database");
-		// write values to stock_data(DB) and keep stockData(StockResults-Object)
+		// write values to stock_data(DB)
 		writeToStocksDB(stockData);
 
 		// delete all dates, that are not between (including) start and (excluding) end
@@ -88,17 +124,44 @@ public class DamnShit {
 			dep.sort();
 			Trader.trade(dep, stockData);
 			loglnf("Current Strat: %s", dep.getStrategy());
-			if(BackTesting.DEBUG()){
+			/*if(BackTesting.DEBUG()){
 				if(!dep.getStrategy().equals(Depot.Strategy.NONE)) {
 					for (var i = 0; i < dep.getData().size(); ++i) {
 						logf(dep.getData().get(i).mDate.toString());
-						loglnf(" money: %.2f, stocks: %d", dep.getData().get(i).mMoney, dep.getData().get(i).mStocks);
+						loglnf(" money: %.2f, stocks: %d, close: %.2f, avg: %.2f", dep.getData().get(i).mMoney, dep.getData().get(i).mStocks, dep.getData().get(i).mClose, dep.getData().get(i).mAvg200);
 					}
+
+					// insert DEBUG-linechart of close and avg200 - done
+					XYChart chart = new XYChartBuilder().height(200).width(200).title(mSymbol).xAxisTitle("Date").yAxisTitle("Value").build();
+					chart.getStyler().setDatePattern("yyyy-mm-dd");
+					chart.getStyler().setDecimalPattern("#0.00");
+					chart.getStyler().setLocale(Locale.getDefault());
+
+					DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+
+					var close = new ArrayList<Float>();
+					var dates = new ArrayList<Date>();
+					var avg = new ArrayList<Float>();
+
+					for(var i = 0; i < dep.getData().size(); ++i){
+						close.add(dep.getData().get(i).mClose);
+						avg.add(dep.getData().get(i).mAvg200);
+
+						Date date = null;
+						try{
+							date = dateFormat.parse(dep.getData().get(i).mDate.format(DateTimeFormatter.ISO_DATE));
+						}catch(ParseException e){
+							e.printStackTrace();
+						}
+						dates.add(date);
+					}
+					chart.addSeries("close", dates, close).setMarker(SeriesMarkers.NONE);
+					chart.addSeries("avg200", dates, avg).setMarker(SeriesMarkers.NONE);
+					new SwingWrapper<XYChart>(chart).displayChart();
 					//System.exit(0);
 				}
-			}
+			}*/
 		}
-		System.exit(0);
 
 		// write new values to backtesting_depot
 		writeToDepotDb(depotData, stockData.getSymbol());
@@ -110,7 +173,7 @@ public class DamnShit {
 	}
 
 	public StockResults readFromStockDb(String symbol, LocalDate start, LocalDate end){
-		mStockDb = new StockDatabase(crapDbCred.host(), crapDbCred.user(), crapDbCred.password(), crapDbCred.database());
+		mStockDb = new StockDatabase(crapDbCred);
 		var resOut = new StockResults("ERROR");
 		try{
 			mLogGui.loglnf("Connecting to stockresults-db");
@@ -197,7 +260,7 @@ public class DamnShit {
 	public void drawChart(ArrayList<Depot> depoData, String symbol){
 		XYChart chart = new XYChartBuilder().width(Environment.getDesktopWidth_Multiple())
 			.height(Environment.getDesktopHeight_Multiple()).title(symbol)
-			.xAxisTitle("Dates").yAxisTitle("Money").build();
+			.xAxisTitle("Dates").yAxisTitle("Worth").build();
 		chart.getStyler().setDatePattern("yyyy-mm-dd");
 		chart.getStyler().setDecimalPattern("#0.00");
 		chart.getStyler().setLocale(Locale.getDefault());
@@ -212,7 +275,7 @@ public class DamnShit {
 			var dates = new ArrayList<Date>();
 			for(var p : depot.getData()){
 				// add money - yAxis-values
-				money.add(p.mMoney);
+				money.add(p.mWorth);
 
 				// add dates - xAxis-Values
 				Date date = null;
@@ -267,7 +330,10 @@ public class DamnShit {
 					0.0f,
 					firstStockDate.getValue(StockDataPoint.ValueType.avg200),
 					// use close, so splitCorrection can be done
-					firstStockDate.getValue(StockDataPoint.ValueType.close_adjusted),
+					firstStockDate.getValue(
+						(BackTesting.usingAdjusted()) ?
+							StockDataPoint.ValueType.close_adjusted :
+						StockDataPoint.ValueType.close),
 					mMoneyPerSymbol
 				)
 			));
@@ -343,7 +409,6 @@ public class DamnShit {
 	}
 
 	public void writeToStocksDB(StockResults res){
-		var writingWith = res.clone();
 
 		mStockDb = new StockDatabase("localhost", "root", "DuArschloch4", "baumbartstocks");
 
@@ -353,9 +418,13 @@ public class DamnShit {
 			mLogGui.loglnf("creating database, if necessary");
 			mStockDb.createDatabase();
 			mLogGui.loglnf("creating table if necessary");
-			mStockDb.createTable(writingWith.getTableName());
+			mStockDb.createTable(res.getTableName());
 			mLogGui.loglnf("inserting/Updating stock values on db");
-			mStockDb.insertOrUpdateStock(writingWith);
+			mStockDb.insertOrUpdateStock(res);
+			mLogGui.loglnf("updating average stock values");
+			mStockDb.calcAvg(res);
+			mLogGui.loglnf("inserting/Updating averages on db");
+			mStockDb.insertOrUpdateStock(res);
 			mLogGui.loglnf("disconnection from stocks-db");
 			mStockDb.disconnect();
 		}catch(SQLException e){

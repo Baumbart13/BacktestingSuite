@@ -32,6 +32,92 @@ public class BackTestingDatabase extends StockDatabase {
 		}
 	}
 
+	public Depot.Point getNewestDepotPoint(Depot.Strategy strat, String symbol) throws SQLException{
+		var out = new Depot.Point();
+
+		var stmnt = mConnection.prepareStatement(String.format(
+			"select %s AS 'date', %s AS 'flag', %s AS 'delta', %s AS 'stocks', %s AS 'worth', %s AS 'avg, " +
+				"%s AS 'close', %s AS 'money' from %s WHERE %s=? and %s=? ORDER BY %s DESC LIMIT 1;",
+			DatabaseNames_Backtesting.date,
+			DatabaseNames_Backtesting.buyFlag,
+			DatabaseNames_Backtesting.delta,
+			DatabaseNames_Backtesting.stocks,
+			DatabaseNames_Backtesting.worth,
+			DatabaseNames_Backtesting.avg,
+			DatabaseNames_Backtesting.close,
+			DatabaseNames_Backtesting.money,
+			// from
+			_TABLE_NAME,
+			// where
+			DatabaseNames_Backtesting.symbol,
+			// and
+			DatabaseNames_Backtesting.strat,
+			// order by
+			DatabaseNames_Backtesting.date
+		));
+		stmnt.setString(1, symbol);
+		stmnt.setInt(2, strat.ordinal());
+
+		var rs = stmnt.executeQuery();
+		while(rs.next()){
+			out = new Depot.Point(
+				rs.getDate("date").toLocalDate(),
+				Depot.Point.BuyFlag.valueOf(rs.getInt("flag")),
+				rs.getInt("delta"),
+				rs.getInt("stocks"),
+				rs.getFloat("worth"),
+				rs.getFloat("avg"),
+				rs.getFloat("close"),
+				rs.getFloat("money")
+			);
+		}
+
+		return out;
+	}
+
+	public Depot.Point getOldestDepotPoint(Depot.Strategy strat, String symbol) throws SQLException{
+		var out = new Depot.Point();
+
+		var stmnt = mConnection.prepareStatement(String.format(
+			"select %s AS 'date', %s AS 'flag', %s AS 'delta', %s AS 'stocks', %s AS 'worth', %s AS 'avg, " +
+				"%s AS 'close', %s AS 'money' from %s WHERE %s=? and %s=? ORDER BY %s ASC LIMIT 1;",
+			DatabaseNames_Backtesting.date,
+			DatabaseNames_Backtesting.buyFlag,
+			DatabaseNames_Backtesting.delta,
+			DatabaseNames_Backtesting.stocks,
+			DatabaseNames_Backtesting.worth,
+			DatabaseNames_Backtesting.avg,
+			DatabaseNames_Backtesting.close,
+			DatabaseNames_Backtesting.money,
+			// from
+			_TABLE_NAME,
+			// where
+			DatabaseNames_Backtesting.symbol,
+			// and
+			DatabaseNames_Backtesting.strat,
+			// order by
+			DatabaseNames_Backtesting.date
+		));
+		stmnt.setString(1, symbol);
+		stmnt.setInt(2, strat.ordinal());
+
+		var rs = stmnt.executeQuery();
+		while(rs.next()){
+			out = new Depot.Point(
+				rs.getDate("date").toLocalDate(),
+				Depot.Point.BuyFlag.valueOf(rs.getInt("flag")),
+				rs.getInt("delta"),
+				rs.getInt("stocks"),
+				rs.getFloat("worth"),
+				rs.getFloat("avg"),
+				rs.getFloat("close"),
+				rs.getFloat("money")
+			);
+		}
+
+		return out;
+	}
+
 	@Override
 	public void createTable(String tableName) throws SQLException{
 		mConnection.prepareStatement(String.format(

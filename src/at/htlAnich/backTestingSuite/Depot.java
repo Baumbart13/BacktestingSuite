@@ -107,6 +107,11 @@ public class Depot implements CanBeTable {
 		public static Strategy valueOf(int i){
 			return values()[i];
 		}
+
+		@Override
+		public String toString() {
+			return this.name().replace('_', ' ');
+		}
 	}
 
 	public Depot(String symbol, Strategy strat, Point... points){

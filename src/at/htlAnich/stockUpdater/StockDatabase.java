@@ -36,6 +36,10 @@ public class StockDatabase extends MySQL implements CanBeTable {
 		this(stockDb.mHostname, stockDb.mUser, stockDb.mPassword, stockDb.mDatabase);
 	}
 
+	public StockDatabase(CredentialLoader.DatabaseCredentials cred){
+		this(cred.host(), cred.user(), cred.password(), cred.database());
+	}
+
 	@Override
 	public Database clone() {
 		return new StockDatabase(this);
@@ -66,25 +70,6 @@ public class StockDatabase extends MySQL implements CanBeTable {
 		}
 	}
 
-	public void setAvg200(String symbol, LocalDate date, float avg200) throws SQLException{
-		var stmnt = this.mConnection.prepareStatement(String.format(
-			"insert into %s (%s, %s, %s) VALUES (?, ?, ?) on duplicate key %s=?;",
-			_TABLE_NAME__DATA,
-			symbol,
-			StockResults.DatabaseNames_Data.data_avg200,
-			StockResults.DatabaseNames_Data.data_datetime,
-
-			StockResults.DatabaseNames_Data.data_avg200
-		));
-
-		stmnt.setString(1, symbol);
-		stmnt.setFloat(2, avg200);
-		stmnt.setDate(3, java.sql.Date.valueOf(date));
-		stmnt.setFloat(4, avg200);
-
-		stmnt.executeUpdate();
-	}
-
 	public float getAvg200(String symbol, LocalDate upper) throws SQLException{
 		var out = 0.0f;
 		var stmnt = this.mConnection.prepareStatement(String.format(
@@ -105,6 +90,25 @@ public class StockDatabase extends MySQL implements CanBeTable {
 		}
 
 		return out;
+	}
+
+	public void setAvg200(String symbol, LocalDate date, float avg200) throws SQLException{
+		var stmnt = this.mConnection.prepareStatement(String.format(
+			"insert into %s (%s, %s, %s) VALUES (?, ?, ?) on duplicate key update %s=?;",
+			_TABLE_NAME__DATA,
+			StockResults.DatabaseNames_Data.data_symbol,
+			StockResults.DatabaseNames_Data.data_avg200,
+			StockResults.DatabaseNames_Data.data_datetime,
+
+			StockResults.DatabaseNames_Data.data_avg200
+		));
+
+		stmnt.setString(1, symbol);
+		stmnt.setFloat(2, avg200);
+		stmnt.setDate(3, java.sql.Date.valueOf(date));
+		stmnt.setFloat(4, avg200);
+
+		stmnt.executeUpdate();
 	}
 
 	public StockResults getValues(String symbol) throws SQLException{

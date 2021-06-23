@@ -3,7 +3,8 @@ package at.htlAnich.backTestingSuite;
 public enum ProgramArguments {
 	DEBUG,
 	file,
-	inProduction;
+	inProduction,
+	notAdjusted;
 
 	public static final String PREFIX = "--";
 

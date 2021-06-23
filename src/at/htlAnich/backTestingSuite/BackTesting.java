@@ -27,6 +27,8 @@ public class BackTesting {
 	public static boolean DEBUG(){return DEBUG;}
 	private static boolean inProd = false;
 	public static boolean inProduction(){return inProd;}
+	private static boolean usingAdjusted = true;
+	public static boolean usingAdjusted(){return usingAdjusted;}
 
 	public static void argumentHandling(List<String> args){
 		if(args == null){
@@ -49,6 +51,10 @@ public class BackTesting {
 				case DEBUG:
 					logf("DEBUG suite entered%n");
 					DEBUG = true;
+					break;
+				case notAdjusted:
+					logf("Not using adjsuted close values%n");
+					usingAdjusted = false;
 					break;
 			}
 		}
@@ -77,21 +83,28 @@ public class BackTesting {
 				logf("Please enter your total money you want to spend on each stock: ");
 				totalMoney = cliInput.nextFloat();
 			}else{
-				startDate = LocalDate.of(2020, 5, 6);
-				endDate = LocalDate.of(2021, 6, 5);
+				startDate = LocalDate.of(2010, 1, 1);
+				endDate = LocalDate.of(2021,6,16);
 				totalMoney = 100000.0f;
 			}
 
 			final var noStocks = requests.size();
 			while(requests.size() > 0){
 				var symbol = requests.poll();
-				System.out.printf("Current stock: %s%n", symbol);
+				logf("Current stock: %s%n", symbol);
 				damn = new DamnShit(symbol, totalMoney/noStocks, inProd);
 				damn.getValuesAndUpdateDatabase(startDate, endDate);
-				System.out.printf("%s ended for %s%n%n", DamnShit.class.toString(), symbol);
+				logf("%s ended for %s%n", DamnShit.class.toString(), symbol);
+
+				for(var strat : Depot.Strategy.values()) {
+					var firstDayTotalWorth = damn.getFirstDepotEntry(strat).mMoney;
+					var lastDayTotalWorth = damn.getLastDepotEntry(strat).mMoney;
+					loglnf("strategy used: %s%npercentual difference: %.4f%nabsolute value: %.2f",
+						strat.toString(), lastDayTotalWorth/firstDayTotalWorth, lastDayTotalWorth);
+				}
 			}
 
-			System.out.println("Waiting to enter something to exit program");
+			logln("Waiting to enter something to exit program");
 			waitForKeyPress();
 			System.exit(0);
 		}catch(Exception e){

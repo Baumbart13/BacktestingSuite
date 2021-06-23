@@ -1,5 +1,6 @@
 package at.htlAnich.stockUpdater;
 
+import at.htlAnich.backTestingSuite.BackTesting;
 import at.htlAnich.backTestingSuite.Depot;
 import at.htlAnich.backTestingSuite.badCode.DamnShit;
 import at.htlAnich.tools.dataTypes.CanSaveCSV;
@@ -86,7 +87,9 @@ public class StockResults implements CanBeTable {
 	public StockResults(StockResults other){
 		if(other == null) return;
 		this.mLowerBounds = new HashMap<StockDataPoint.ValueType, Float>(other.mLowerBounds);
+		this.mLowerBounds.putAll(other.mLowerBounds);
 		this.mUpperBounds = new HashMap<StockDataPoint.ValueType, Float>(other.mUpperBounds);
+		this.mUpperBounds.putAll(other.mUpperBounds);
 		this.mOldestDate = LocalDateTime.of(other.mOldestDate.toLocalDate(), other.mOldestDate.toLocalTime());
 		this.mNewestDate = LocalDateTime.of(other.mNewestDate.toLocalDate(), other.mNewestDate.toLocalTime());
 		this.mDataPoints = new ArrayList<>(other.mDataPoints.size());
@@ -118,20 +121,12 @@ public class StockResults implements CanBeTable {
 
 		for(var currDay = 0; currDay < this.mDataPoints.size(); ++currDay){
 
-			// sum up all values from currPoint.Date.minusDays(200)
 			var sum = 0.0f;
-			for(var dayPast = currDay-1; !(dayPast<0 || dayPast<currDay-daysBack); --dayPast){
-				if(dayPast < 0 || dayPast < currDay-daysBack) {
-					try{
-						throw new Exception("Should not have come to this");
-					}catch(Exception e){
-						e.printStackTrace();
-					}
-					break;
-				}
-				sum += this.mDataPoints.get(dayPast).getValue(StockDataPoint.ValueType.close_adjusted);
+			for(var i = currDay-1; i > currDay-daysBack && i >= 0; --i){
+				sum = (sum + this.mDataPoints.get(i).getValue(BackTesting.usingAdjusted() ?
+					StockDataPoint.ValueType.close_adjusted :
+					StockDataPoint.ValueType.close)) / 2;
 			}
-			sum = sum/daysBack;
 
 			this.mDataPoints.get(currDay).setValue(StockDataPoint.ValueType.avg200, sum);
 		}

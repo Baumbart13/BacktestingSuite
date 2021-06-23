@@ -59,7 +59,7 @@ public final class Trader {
 		for(var i = 1; i < stockRes.getDataPoints().size(); ++i){
 			// for easier access
 			var todaysStock = stockRes.getDataPoints().get(i);
-			var yesterdaysDepot = dep.getData().get(i);
+			var yesterdaysDepot = dep.getData().get(i-1);
 
 			// create new depotPoint if there is none
 			if(i >= dep.getData().size()){
@@ -82,17 +82,20 @@ public final class Trader {
 			}
 
 			final var BUY_AMOUNT = maxStocksCanBuy;
+			final var SELL_AMOUNT = todaysDepot.mStocks;
 			// buy BUY_AMOUNT if today.close>today.avg200
 			if(canBuy && todayClose > todayAvg){
-				todaysDepot.mBuyAmount += BUY_AMOUNT;
+				todaysDepot.mBuyAmount = +BUY_AMOUNT;
 				todaysDepot.mFlag = Depot.Point.BuyFlag.BUY;
 				todaysDepot.mMoney -= BUY_AMOUNT*todaysDepot.mClose;
+				todaysDepot.mStocks += BUY_AMOUNT;
 			}
 			// sell BUY_AMOUNT if today.close<today.avg200
-			else if(canSell && todayAvg < todayClose){
-				todaysDepot.mBuyAmount -= BUY_AMOUNT;
+			else if((canSell && todayClose < todayAvg) || i==stockRes.getDataPoints().size()-1){
+				todaysDepot.mBuyAmount = -SELL_AMOUNT;
 				todaysDepot.mFlag = Depot.Point.BuyFlag.SELL;
-				todaysDepot.mMoney += BUY_AMOUNT*todaysDepot.mClose;
+				todaysDepot.mMoney += SELL_AMOUNT*todaysDepot.mClose;
+				todaysDepot.mStocks -= SELL_AMOUNT;
 			}
 			// do nothing if today.close==today.avg200
 			else{
@@ -101,11 +104,12 @@ public final class Trader {
 					date.getYear(), date.getMonth(), date.getDayOfMonth());
 
 				// just to be sure
-				todaysDepot.mBuyAmount += 0;
+				todaysDepot.mBuyAmount = 0;
 				todaysDepot.mFlag = Depot.Point.BuyFlag.UNCHANGED;
 				todaysDepot.mMoney -= 0;
 			}
-			todaysDepot.mWorth = todaysDepot.mClose*todaysDepot.mStocks;
+			todaysDepot.mWorth = todaysDepot.mClose*todaysDepot.mStocks + todaysDepot.mMoney;
+			dep.getData().set(i, todaysDepot);
 		}
 	}
 	public static void trade_avg200_3Percent(Depot dep, StockResults stockRes){
@@ -113,14 +117,10 @@ public final class Trader {
 		// startDate and endDate (both including)
 		// if dep does not have a day for the corresponding date, create a new Depot.Point
 		// at this date and then see, whether a trade shall happen or not
-		for(var i = 0; i < stockRes.getDataPoints().size(); ++i){
+		for(var i = 1; i < stockRes.getDataPoints().size(); ++i){
 			// for easier access
 			var todaysStock = stockRes.getDataPoints().get(i);
-			var yesterdaysDepot = dep.getData().get(
-				// if i==0, we would be fucked up, but we can use a little trick
-				// by just using the first entry as yesterday, where we have no yesterday
-				(i==0)?i:i-1 // i love the if's we can make via the ternary operator
-			);
+			var yesterdaysDepot = dep.getData().get(i-1);
 
 			// create new depotPoint if there is none
 			if(i >= dep.getData().size()){
@@ -129,10 +129,10 @@ public final class Trader {
 			var todaysDepot = dep.getData().get(i);
 
 			// lesss go trading
-			// round today.close to .00
-			int todayClose = (int)(todaysStock.getValue(StockDataPoint.ValueType.close_adjusted) * 100.0f);
-			// round today.avg200 to .00
-			int todayAvg = (int)(todaysStock.getValue(StockDataPoint.ValueType.avg200) * 100.0f);
+			// round today.close to .00; just for comparison
+			var todayClose = (float)((int)(todaysStock.getValue(StockDataPoint.ValueType.close_adjusted) * 100.0f))/100.0f;
+			// round today.avg200 to .00; just for comparison
+			var todayAvg = (float)((int)(todaysStock.getValue(StockDataPoint.ValueType.avg200) * 100.0f))/100.0f;
 
 			int maxStocksCanBuy = (int)(todaysDepot.mMoney / todaysDepot.mClose);
 			boolean canBuy = maxStocksCanBuy >= 1;
@@ -143,28 +143,34 @@ public final class Trader {
 			}
 
 			final var BUY_AMOUNT = maxStocksCanBuy;
+			final var SELL_AMOUNT = todaysDepot.mStocks;
 			// buy BUY_AMOUNT if today.close>today.avg200
 			if(canBuy && todayClose > todayAvg*1.03){
-				todaysDepot.mBuyAmount += BUY_AMOUNT;
+				todaysDepot.mBuyAmount = +BUY_AMOUNT;
 				todaysDepot.mFlag = Depot.Point.BuyFlag.BUY;
 				todaysDepot.mMoney -= BUY_AMOUNT*todaysDepot.mClose;
+				todaysDepot.mStocks += BUY_AMOUNT;
 			}
 			// sell BUY_AMOUNT if today.close<today.avg200
-			else if(canSell && todayAvg < todayClose*1.03){
-				todaysDepot.mBuyAmount -= BUY_AMOUNT;
-				todaysDepot.mFlag = Depot.Point.BuyFlag.SELL;
-				todaysDepot.mMoney += BUY_AMOUNT*todaysDepot.mClose;
+			else if(canSell && todayAvg*0.97 < todayClose){
+				todaysDepot.mBuyAmount = -SELL_AMOUNT;
+				todaysDepot.mFlag = Depot.Point.BuyFlag.BUY;
+				todaysDepot.mMoney += SELL_AMOUNT*todaysDepot.mClose;
+				todaysDepot.mStocks += SELL_AMOUNT;
 			}
 			// do nothing if today.close==today.avg200
 			else{
-				DamnShit.mLogGui.loglnf("Not traded today. Today's date is: %s", todaysStock.mDateTime.toLocalDate().toString());
+				var date = todaysStock.mDateTime.toLocalDate();
+				DamnShit.mLogGui.loglnf("Not traded today. Today's date is: %d %s %d.",
+					date.getYear(), date.getMonth(), date.getDayOfMonth());
 
 				// just to be sure
-				todaysDepot.mBuyAmount += 0;
+				todaysDepot.mBuyAmount = 0;
 				todaysDepot.mFlag = Depot.Point.BuyFlag.UNCHANGED;
 				todaysDepot.mMoney -= 0;
 			}
-			todaysDepot.mWorth = todayClose*todaysDepot.mStocks;
+			todaysDepot.mWorth = todaysDepot.mClose*todaysDepot.mStocks + todaysDepot.mMoney;
+			dep.getData().set(i, todaysDepot);
 		}
 	}
 	public static void trade_avg200_false(Depot dep, StockResults stockRes){
@@ -172,14 +178,10 @@ public final class Trader {
 		// startDate and endDate (both including)
 		// if dep does not have a day for the corresponding date, create a new Depot.Point
 		// at this date and then see, whether a trade shall happen or not
-		for(var i = 0; i < stockRes.getDataPoints().size(); ++i){
+		for(var i = 1; i < stockRes.getDataPoints().size(); ++i){
 			// for easier access
 			var todaysStock = stockRes.getDataPoints().get(i);
-			var yesterdaysDepot = dep.getData().get(
-				// if i==0, we would be fucked up, but we can use a little trick
-				// by just using the first entry as yesterday, where we have no yesterday
-				(i==0)?i:i-1 // i love the if's we can make via the ternary operator
-			);
+			var yesterdaysDepot = dep.getData().get(i-1);
 
 			// create new depotPoint if there is none
 			if(i >= dep.getData().size()){
@@ -202,29 +204,84 @@ public final class Trader {
 			}
 
 			final var BUY_AMOUNT = maxStocksCanBuy;
-			// buy BUY_AMOUNT if today.close<today.avg200
+			final var SELL_AMOUNT = todaysDepot.mStocks;
+			// buy BUY_AMOUNT if today.close>today.avg200
 			if(canBuy && todayClose < todayAvg){
-				todaysDepot.mBuyAmount += BUY_AMOUNT;
+				todaysDepot.mBuyAmount = +BUY_AMOUNT;
 				todaysDepot.mFlag = Depot.Point.BuyFlag.BUY;
 				todaysDepot.mMoney -= BUY_AMOUNT*todaysDepot.mClose;
+				todaysDepot.mStocks += BUY_AMOUNT;
 			}
-			// sell BUY_AMOUNT if today.close>today.avg200
-			else if(canSell && todayAvg > todayClose){
-				todaysDepot.mBuyAmount -= BUY_AMOUNT;
+			// sell BUY_AMOUNT if today.close<today.avg200
+			else if((canSell && todayClose > todayAvg) || i==stockRes.getDataPoints().size()-1){
+				todaysDepot.mBuyAmount = -SELL_AMOUNT;
 				todaysDepot.mFlag = Depot.Point.BuyFlag.SELL;
-				todaysDepot.mMoney += BUY_AMOUNT*todaysDepot.mClose;
+				todaysDepot.mMoney += SELL_AMOUNT*todaysDepot.mClose;
+				todaysDepot.mStocks -= SELL_AMOUNT;
 			}
 			// do nothing if today.close==today.avg200
 			else{
-				DamnShit.mLogGui.loglnf("Not traded today. Today's date is: %s", todaysStock.mDateTime.toLocalDate().toString());
+				var date = todaysStock.mDateTime.toLocalDate();
+				DamnShit.mLogGui.loglnf("Not traded today. Today's date is: %d %s %d.",
+					date.getYear(), date.getMonth(), date.getDayOfMonth());
 
 				// just to be sure
-				todaysDepot.mBuyAmount += 0;
+				todaysDepot.mBuyAmount = 0;
 				todaysDepot.mFlag = Depot.Point.BuyFlag.UNCHANGED;
 				todaysDepot.mMoney -= 0;
 			}
-			todaysDepot.mWorth = todayClose*todaysDepot.mStocks;
+			todaysDepot.mWorth = todaysDepot.mClose*todaysDepot.mStocks + todaysDepot.mMoney;
+			dep.getData().set(i, todaysDepot);
 		}
 	}
-	public static void trade_buyAndHold(Depot dep, StockResults stockRes){}
+	public static void trade_buyAndHold(Depot dep, StockResults stockRes){
+
+		// go through each date of stockRes, because it holds all needed values from
+		// startDate and endDate (both including)
+		// if dep does not have a day for the corresponding date, create a new Depot.Point
+		// at this date and then see, whether a trade shall happen or not
+		for(var i = 1; i < stockRes.getDataPoints().size(); ++i){
+			// for easier access
+			var todaysStock = stockRes.getDataPoints().get(i);
+			var yesterdaysDepot = dep.getData().get(i-1);
+
+			// create new depotPoint if there is none
+			if(i >= dep.getData().size()){
+				createNewDepotPoint(dep, yesterdaysDepot, todaysStock);
+			}
+			var todaysDepot = dep.getData().get(i);
+
+			// lesss go trading
+			// SELL on end
+			if(i <= 1){
+				final var SELL_AMOUNT = todaysDepot.mStocks;
+				todaysDepot.mBuyAmount = -SELL_AMOUNT;
+				todaysDepot.mFlag = Depot.Point.BuyFlag.SELL;
+				todaysDepot.mMoney += SELL_AMOUNT*todaysDepot.mClose;
+				todaysDepot.mStocks -= SELL_AMOUNT;
+			}
+			// BUY on beginning
+			else if(i >= stockRes.getDataPoints().size()-1){
+				final var BUY_AMOUNT = (int)(todaysDepot.mMoney / todaysDepot.mClose);
+				todaysDepot.mBuyAmount = +BUY_AMOUNT;
+				todaysDepot.mFlag = Depot.Point.BuyFlag.BUY;
+				todaysDepot.mMoney -= BUY_AMOUNT*todaysDepot.mClose;
+				todaysDepot.mStocks += BUY_AMOUNT;
+
+			}
+			// do nothing if neither first or last entry
+			else{
+				var date = todaysStock.mDateTime.toLocalDate();
+				DamnShit.mLogGui.loglnf("Not traded today. Today's date is: %d %s %d.",
+					date.getYear(), date.getMonth(), date.getDayOfMonth());
+
+				// just to be sure
+				todaysDepot.mBuyAmount = 0;
+				todaysDepot.mFlag = Depot.Point.BuyFlag.UNCHANGED;
+				todaysDepot.mMoney -= 0;
+			}
+			todaysDepot.mWorth = todaysDepot.mClose*todaysDepot.mStocks + todaysDepot.mMoney;
+			dep.getData().set(i, todaysDepot);
+		}
+	}
 }
