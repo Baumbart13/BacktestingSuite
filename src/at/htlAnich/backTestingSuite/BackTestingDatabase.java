@@ -36,7 +36,7 @@ public class BackTestingDatabase extends StockDatabase {
 		var out = new Depot.Point();
 
 		var stmnt = mConnection.prepareStatement(String.format(
-			"select %s AS 'date', %s AS 'flag', %s AS 'delta', %s AS 'stocks', %s AS 'worth', %s AS 'avg, " +
+			"select %s AS 'date', %s AS 'flag', %s AS 'delta', %s AS 'stocks', %s AS 'worth', %s AS 'avg', " +
 				"%s AS 'close', %s AS 'money' from %s WHERE %s=? and %s=? ORDER BY %s DESC LIMIT 1;",
 			DatabaseNames_Backtesting.date,
 			DatabaseNames_Backtesting.buyFlag,
@@ -79,7 +79,7 @@ public class BackTestingDatabase extends StockDatabase {
 		var out = new Depot.Point();
 
 		var stmnt = mConnection.prepareStatement(String.format(
-			"select %s AS 'date', %s AS 'flag', %s AS 'delta', %s AS 'stocks', %s AS 'worth', %s AS 'avg, " +
+			"select %s AS 'date', %s AS 'flag', %s AS 'delta', %s AS 'stocks', %s AS 'worth', %s AS 'avg', " +
 				"%s AS 'close', %s AS 'money' from %s WHERE %s=? and %s=? ORDER BY %s ASC LIMIT 1;",
 			DatabaseNames_Backtesting.date,
 			DatabaseNames_Backtesting.buyFlag,

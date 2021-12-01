@@ -61,9 +61,22 @@ public class BackTesting {
 	}
 
 	public static LocalDate parseDate(String s){
-		var year = Integer.parseInt(s.substring(0, s.indexOf(" ")));
-		var month = Integer.parseInt(s.substring(s.indexOf(" ") + 1, s.lastIndexOf(" ")));
-		var day = Integer.parseInt(s.substring(s.lastIndexOf(" ")+1));
+		boolean exceptionHappened;
+		var year = -1;
+		var month = -1;
+		var day = -1;
+		do {
+			exceptionHappened = false;
+			try {
+				year = Integer.parseInt(s.substring(0, s.indexOf(" ")));
+				month = Integer.parseInt(s.substring(s.indexOf(" ") + 1, s.lastIndexOf(" ")));
+				day = Integer.parseInt(s.substring(s.lastIndexOf(" ") + 1));
+			}catch(Exception e){
+				exceptionHappened = true;
+				logf("Please enter a date with the following format, excluding the brackets [yyyy mm dd]: ");
+				s = cliInput.nextLine();
+			}
+		}while(exceptionHappened);
 
 		return LocalDate.of(year, month, day);
 	}
@@ -84,7 +97,7 @@ public class BackTesting {
 				totalMoney = cliInput.nextFloat();
 			}else{
 				startDate = LocalDate.of(2010, 1, 1);
-				endDate = LocalDate.of(2021,6,16);
+				endDate = LocalDate.now();
 				totalMoney = 100000.0f;
 			}
 
@@ -100,7 +113,7 @@ public class BackTesting {
 					var firstDayTotalWorth = damn.getFirstDepotEntry(strat).mMoney;
 					var lastDayTotalWorth = damn.getLastDepotEntry(strat).mMoney;
 					loglnf("strategy used: %s%npercentual difference: %.4f%nabsolute value: %.2f",
-						strat.toString(), lastDayTotalWorth/firstDayTotalWorth, lastDayTotalWorth);
+						strat.toString(), (double)lastDayTotalWorth/(double)firstDayTotalWorth, lastDayTotalWorth);
 				}
 			}
 

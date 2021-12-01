@@ -14,8 +14,12 @@ import at.htlAnich.tools.Environment;
 import org.knowm.xchart.SwingWrapper;
 import org.knowm.xchart.XYChart;
 import org.knowm.xchart.XYChartBuilder;
+import org.knowm.xchart.style.XYStyler;
 import org.knowm.xchart.style.markers.SeriesMarkers;
+import org.knowm.xchart.style.theme.XChartTheme;
 
+import javax.swing.*;
+import java.awt.*;
 import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -124,8 +128,8 @@ public class DamnShit {
 			dep.sort();
 			Trader.trade(dep, stockData);
 			loglnf("Current Strat: %s", dep.getStrategy());
-			/*if(BackTesting.DEBUG()){
-				if(!dep.getStrategy().equals(Depot.Strategy.NONE)) {
+			if(BackTesting.DEBUG()){
+				/*if(!dep.getStrategy().equals(Depot.Strategy.NONE)) {
 					for (var i = 0; i < dep.getData().size(); ++i) {
 						logf(dep.getData().get(i).mDate.toString());
 						loglnf(" money: %.2f, stocks: %d, close: %.2f, avg: %.2f", dep.getData().get(i).mMoney, dep.getData().get(i).mStocks, dep.getData().get(i).mClose, dep.getData().get(i).mAvg200);
@@ -158,9 +162,10 @@ public class DamnShit {
 					chart.addSeries("close", dates, close).setMarker(SeriesMarkers.NONE);
 					chart.addSeries("avg200", dates, avg).setMarker(SeriesMarkers.NONE);
 					new SwingWrapper<XYChart>(chart).displayChart();
-					//System.exit(0);
 				}
-			}*/
+				waitForKeyPress();
+				System.exit(0);*/
+			}
 		}
 
 		// write new values to backtesting_depot
@@ -264,6 +269,10 @@ public class DamnShit {
 		chart.getStyler().setDatePattern("yyyy-mm-dd");
 		chart.getStyler().setDecimalPattern("#0.00");
 		chart.getStyler().setLocale(Locale.getDefault());
+		chart.getStyler().setZoomEnabled(true);
+		chart.getStyler().setZoomResetByButton(true);
+		chart.getStyler().setZoomResetByDoubleClick(false);
+		chart.getStyler().setZoomResetButtomPosition(XYStyler.ButtonPosition.InsideNE);
 
 		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
@@ -288,7 +297,34 @@ public class DamnShit {
 			}
 			chart.addSeries(depot.getStrategy().toString(), dates, money).setMarker(SeriesMarkers.NONE);
 		}
-		new SwingWrapper<XYChart>(chart).displayChart();
+		addButtons(new SwingWrapper<XYChart>(chart).displayChart(), chart);
+	}
+
+	public void addButtons(JFrame frame, XYChart chart){
+		frame.setVisible(false);
+		var menubar = new JMenuBar();
+		var menu = new JMenu("Show");
+		for(var k : chart.getSeriesMap().keySet()){
+			var series = chart.getSeriesMap().get(k);
+
+			var menuItem = new JMenuItem(k);
+			menuItem.addActionListener(e ->{
+				series.setEnabled(!series.isEnabled());
+				series.setShowInLegend(!series.isShowInLegend());
+				var r = series.getLineColor().getRed();
+				var g = series.getLineColor().getGreen();
+				var b = series.getLineColor().getBlue();
+				if(series.isEnabled()){
+					series.setLineColor(new Color(r, g, b, 1.0f));
+				}else{
+					series.setLineColor(new Color(r, g, b, 0.3f));
+				}
+			});
+			menu.add(menuItem);
+		}
+		menubar.add(menu);
+		frame.setJMenuBar(menubar);
+		frame.setVisible(true);
 	}
 
 	public void writeToDepotDb(ArrayList<Depot> depoData, String symbol){
